@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+frontend/node_modules/
+frontend/.next/
+frontend/dev-server.*.log
+
+.tools/
+.venv/
+.run/
+logs/
+.env
+.env.local

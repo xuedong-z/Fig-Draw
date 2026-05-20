@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: #f6f7f4;
+  color: #18202a;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.control-label {
+  @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+}
+
+.field {
+  @apply h-9 w-full rounded border border-rule bg-white px-2 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15;
+}
+
+.panel-shell {
+  @apply border border-rule bg-white shadow-soft;
+}

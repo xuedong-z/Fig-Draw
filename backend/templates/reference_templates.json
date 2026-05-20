@@ -1,0 +1,714 @@
+[
+  {
+    "id": "battery_long_cycling_nature_dual_axis",
+    "figure_type": "long_cycling",
+    "name": "Manuscript-style dual-axis long cycling panel",
+    "category": "Battery & Electrochemistry",
+    "description": "A submission-ready long cycling panel modeled on electrochemical performance figures: wide double-column layout, capacity decay curves, CE traces near 100%, and manuscript annotations.",
+    "best_use_case": "Main-text electrochemical performance figures where long-term cycling stability is the lead panel of a multi-panel battery figure.",
+    "required_semantic_fields": [
+      {
+        "key": "cycle",
+        "label": "Cycle number",
+        "type": "numeric",
+        "aliases": [
+          "cycle",
+          "cycle number",
+          "cycles",
+          "n"
+        ]
+      },
+      {
+        "key": "sample",
+        "label": "Sample name",
+        "type": "categorical",
+        "aliases": [
+          "sample",
+          "group",
+          "cell",
+          "condition"
+        ]
+      },
+      {
+        "key": "capacity",
+        "label": "Specific capacity",
+        "type": "numeric",
+        "aliases": [
+          "capacity",
+          "specific capacity",
+          "discharge capacity",
+          "mah/g",
+          "mah g-1"
+        ]
+      }
+    ],
+    "optional_semantic_fields": [
+      {
+        "key": "coulombic_efficiency",
+        "label": "Coulombic efficiency",
+        "type": "numeric",
+        "aliases": [
+          "ce",
+          "coulombic efficiency",
+          "efficiency",
+          "coulombic_efficiency"
+        ]
+      },
+      {
+        "key": "error",
+        "label": "Error bar",
+        "type": "numeric",
+        "aliases": [
+          "error",
+          "std",
+          "sd",
+          "sem"
+        ]
+      },
+      {
+        "key": "retention",
+        "label": "Capacity retention",
+        "type": "numeric",
+        "aliases": [
+          "retention",
+          "capacity retention",
+          "retention_%"
+        ]
+      }
+    ],
+    "default_column_aliases": {
+      "cycle": [
+        "cycle",
+        "cycle number",
+        "cycles",
+        "n"
+      ],
+      "sample": [
+        "sample",
+        "group",
+        "cell",
+        "condition"
+      ],
+      "capacity": [
+        "capacity",
+        "specific capacity",
+        "discharge capacity",
+        "mah/g"
+      ],
+      "coulombic_efficiency": [
+        "ce",
+        "coulombic efficiency",
+        "efficiency",
+        "coulombic_efficiency"
+      ],
+      "error": [
+        "error",
+        "std",
+        "sd",
+        "sem"
+      ],
+      "retention": [
+        "retention",
+        "capacity retention"
+      ]
+    },
+    "chart_structure": {
+      "x": "cycle",
+      "left_y": "capacity",
+      "right_y": "coulombic_efficiency",
+      "group_by": "sample",
+      "layers": [
+        {
+          "type": "line",
+          "field": "capacity",
+          "axis": "left",
+          "grouped": true
+        },
+        {
+          "type": "scatter_or_line",
+          "field": "coulombic_efficiency",
+          "axis": "right",
+          "grouped": true,
+          "optional": true
+        }
+      ]
+    },
+    "plot_layers": [
+      {
+        "type": "line",
+        "field": "capacity",
+        "axis": "left",
+        "grouped": true
+      },
+      {
+        "type": "scatter_or_line",
+        "field": "coulombic_efficiency",
+        "axis": "right",
+        "grouped": true,
+        "optional": true
+      }
+    ],
+    "default_labels": {
+      "x": "Cycle number",
+      "left_y": "Specific capacity (mAh g-1)",
+      "right_y": "Coulombic efficiency (%)"
+    },
+    "example_rows": [
+      {
+        "cycle": 1,
+        "sample": "NMC811@LiNbO3",
+        "capacity": 170.0,
+        "coulombic_efficiency": 86.0
+      },
+      {
+        "cycle": 2,
+        "sample": "NMC811@LiNbO3",
+        "capacity": 168.5,
+        "coulombic_efficiency": 96.0
+      },
+      {
+        "cycle": 1,
+        "sample": "NMC811",
+        "capacity": 160.0,
+        "coulombic_efficiency": 84.0
+      },
+      {
+        "cycle": 2,
+        "sample": "NMC811",
+        "capacity": 158.8,
+        "coulombic_efficiency": 95.5
+      }
+    ],
+    "reference_image_workflow": {
+      "generation_method": "gpt_image2_reference_style_plus_backend_reconstruction",
+      "purpose": "Use the user-provided Image2 manuscript figure as the visual target; reconstruct a deterministic plotting template from its layout language.",
+      "data_pattern": "Four grouped NMC811 samples across 1000 cycles; capacity decays gradually, while Coulombic efficiency stays as a near-horizontal trace around 100%.",
+      "preview_endpoint": "/api/reference-templates/battery_long_cycling_nature_dual_axis/preview"
+    },
+    "layout_analysis": {
+      "visual_hierarchy": "Panel label and axes establish a manuscript multi-panel figure; capacity decay curves are the dominant data layer and CE runs as a secondary near-horizontal layer at the top.",
+      "plot_region": "Very wide double-column rectangle with a low height, matching the top panel of an electrochemical performance figure.",
+      "axis_strategy": "Left y axis spans 0-250 mAh g-1; right y axis spans 0-120% CE; x axis spans 0-1000 cycles with sparse major ticks.",
+      "legend_strategy": "Legend sits inside the lower-left plotting area with no frame, using sample labels as the main encoding key.",
+      "annotation_strategy": "Experimental condition text is placed at lower right inside the axes; a small right-side CE arrow/brace can indicate the secondary axis layer.",
+      "typography": "Small Arial-like journal typography with panel label 'a' outside the upper-left corner.",
+      "line_and_marker_strategy": "Capacity and CE traces use thin lines with small open circular markers, matching submission figures rather than presentation charts.",
+      "color_strategy": "Deep blue, pale blue-gray, orange, and muted green echo the provided electrochemical performance figure."
+    },
+    "finalized_layout": {
+      "canvas_width_mm": 183,
+      "canvas_height_mm": 44,
+      "primary_axis": "capacity_left_y",
+      "secondary_axis": "coulombic_efficiency_right_y",
+      "left_margin_mm": 11,
+      "right_margin_mm": 10,
+      "top_margin_mm": 5,
+      "bottom_margin_mm": 9,
+      "legend_position": "lower left",
+      "tick_direction": "in",
+      "capacity_line_style": "solid grouped open-circle lines",
+      "ce_line_style": "near-horizontal open-circle traces on twinx",
+      "condition_annotation": "1 C, 2.8-4.3 V, 25 \u00b0C",
+      "panel_label": "a"
+    },
+    "style_preset": {
+      "font_family": "Arial",
+      "font_size": 8,
+      "axis_label_size": 8,
+      "tick_size": 7,
+      "line_width": 0.9,
+      "marker_size": 2.6,
+      "axis_line_width": 0.8,
+      "tick_width": 0.8,
+      "tick_direction": "in",
+      "background": "white",
+      "grid": false,
+      "palette": "submission_nmc",
+      "legend_position": "lower left",
+      "x_range": [
+        0,
+        1000
+      ],
+      "left_y_range": [
+        0,
+        250
+      ],
+      "right_y_range": [
+        0,
+        120
+      ],
+      "condition_annotation": "1 C, 2.8-4.3 V, 25 \u00b0C",
+      "panel_label": "a",
+      "open_markers": true,
+      "ce_line_style": "solid"
+    },
+    "layout_preset": {
+      "width_mm": 183,
+      "height_mm": 44,
+      "margin_left": 11,
+      "margin_right": 10,
+      "margin_top": 5,
+      "margin_bottom": 9
+    },
+    "quick_controls": [
+      "show_ce",
+      "show_markers",
+      "legend_position",
+      "palette",
+      "axis_labels",
+      "normalize_retention",
+      "show_retention_annotation"
+    ],
+    "advanced_controls": [
+      "line_width",
+      "marker_size",
+      "font_size",
+      "axis_line_width",
+      "tick_width",
+      "x_range",
+      "left_y_range",
+      "right_y_range",
+      "figure_size",
+      "dpi"
+    ],
+    "standard_reference_profile": {
+      "type": "long_cycling_submission_panel",
+      "cycle_start": 0,
+      "cycle_end": 1000,
+      "cycle_step": 10,
+      "samples": [
+        {
+          "name": "NMC811@LiNbO3",
+          "initial_capacity": 170,
+          "final_capacity": 100,
+          "ce_initial": 86,
+          "ce_final": 99.6
+        },
+        {
+          "name": "NMC811",
+          "initial_capacity": 160,
+          "final_capacity": 68,
+          "ce_initial": 84,
+          "ce_final": 99.5
+        },
+        {
+          "name": "NMC811@Al2O3",
+          "initial_capacity": 155,
+          "final_capacity": 48,
+          "ce_initial": 83,
+          "ce_final": 99.4
+        },
+        {
+          "name": "NMC811@Li2ZrO3",
+          "initial_capacity": 150,
+          "final_capacity": 35,
+          "ce_initial": 82,
+          "ce_final": 99.3
+        }
+      ]
+    }
+  },
+  {
+    "id": "battery_long_cycling_capacity_retention",
+    "figure_type": "long_cycling",
+    "name": "Battery paper multi-sample capacity retention",
+    "category": "Battery & Electrochemistry",
+    "description": "Multi-sample cycling comparison emphasizing final-cycle retention and optional error bars.",
+    "best_use_case": "Comparing retention trends across formulations or current collectors when Coulombic efficiency is secondary.",
+    "required_semantic_fields": [
+      {
+        "key": "cycle",
+        "label": "Cycle number",
+        "type": "numeric",
+        "aliases": [
+          "cycle",
+          "cycle number",
+          "cycles",
+          "n"
+        ]
+      },
+      {
+        "key": "sample",
+        "label": "Sample name",
+        "type": "categorical",
+        "aliases": [
+          "sample",
+          "group",
+          "cell",
+          "condition"
+        ]
+      },
+      {
+        "key": "capacity",
+        "label": "Capacity or retention",
+        "type": "numeric",
+        "aliases": [
+          "capacity",
+          "specific capacity",
+          "capacity retention",
+          "retention"
+        ]
+      }
+    ],
+    "optional_semantic_fields": [
+      {
+        "key": "error",
+        "label": "Error bar",
+        "type": "numeric",
+        "aliases": [
+          "error",
+          "std",
+          "sd",
+          "sem"
+        ]
+      },
+      {
+        "key": "retention",
+        "label": "Capacity retention",
+        "type": "numeric",
+        "aliases": [
+          "retention",
+          "capacity retention",
+          "retention_%"
+        ]
+      },
+      {
+        "key": "coulombic_efficiency",
+        "label": "Coulombic efficiency",
+        "type": "numeric",
+        "aliases": [
+          "ce",
+          "coulombic efficiency",
+          "efficiency"
+        ]
+      }
+    ],
+    "default_column_aliases": {
+      "cycle": [
+        "cycle",
+        "cycle number",
+        "cycles",
+        "n"
+      ],
+      "sample": [
+        "sample",
+        "group",
+        "cell",
+        "condition"
+      ],
+      "capacity": [
+        "capacity",
+        "specific capacity",
+        "capacity retention",
+        "retention"
+      ],
+      "error": [
+        "error",
+        "std",
+        "sd",
+        "sem"
+      ],
+      "retention": [
+        "retention",
+        "capacity retention"
+      ],
+      "coulombic_efficiency": [
+        "ce",
+        "coulombic efficiency",
+        "efficiency"
+      ]
+    },
+    "chart_structure": {
+      "x": "cycle",
+      "left_y": "capacity",
+      "group_by": "sample",
+      "layers": [
+        {
+          "type": "line",
+          "field": "capacity",
+          "axis": "left",
+          "grouped": true
+        },
+        {
+          "type": "errorbar",
+          "field": "error",
+          "axis": "left",
+          "grouped": true,
+          "optional": true
+        }
+      ]
+    },
+    "plot_layers": [
+      {
+        "type": "line",
+        "field": "capacity",
+        "axis": "left",
+        "grouped": true
+      },
+      {
+        "type": "errorbar",
+        "field": "error",
+        "axis": "left",
+        "grouped": true,
+        "optional": true
+      }
+    ],
+    "default_labels": {
+      "x": "Cycle number",
+      "left_y": "Specific capacity (mAh g-1)",
+      "right_y": "Coulombic efficiency (%)"
+    },
+    "example_rows": [
+      {
+        "cycle": 1,
+        "sample": "Control",
+        "capacity": 120.5,
+        "error": 2.1
+      },
+      {
+        "cycle": 2,
+        "sample": "Control",
+        "capacity": 119.7,
+        "error": 1.8
+      },
+      {
+        "cycle": 1,
+        "sample": "Modified",
+        "capacity": 135.8,
+        "error": 2.4
+      },
+      {
+        "cycle": 2,
+        "sample": "Modified",
+        "capacity": 136.2,
+        "error": 2.0
+      }
+    ],
+    "style_preset": {
+      "font_family": "Arial",
+      "font_size": 8,
+      "axis_label_size": 8,
+      "tick_size": 7,
+      "line_width": 1.0,
+      "marker_size": 2.8,
+      "axis_line_width": 0.8,
+      "tick_width": 0.8,
+      "tick_direction": "in",
+      "background": "white",
+      "grid": false,
+      "palette": "battery_muted",
+      "legend_position": "best"
+    },
+    "layout_preset": {
+      "width_mm": 89,
+      "height_mm": 62,
+      "margin_left": 12,
+      "margin_right": 6,
+      "margin_top": 6,
+      "margin_bottom": 10
+    },
+    "quick_controls": [
+      "show_markers",
+      "legend_position",
+      "palette",
+      "axis_labels",
+      "normalize_retention",
+      "show_retention_annotation"
+    ],
+    "advanced_controls": [
+      "line_width",
+      "marker_size",
+      "font_size",
+      "axis_line_width",
+      "tick_width",
+      "x_range",
+      "left_y_range",
+      "figure_size",
+      "dpi"
+    ]
+  },
+  {
+    "id": "battery_long_cycling_minimal",
+    "figure_type": "long_cycling",
+    "name": "Minimal long cycling plot",
+    "category": "Battery & Electrochemistry",
+    "description": "Capacity-only long cycling comparison with a restrained minimal journal style.",
+    "best_use_case": "Quick publication-style comparison when only cycle, sample, and capacity are available.",
+    "required_semantic_fields": [
+      {
+        "key": "cycle",
+        "label": "Cycle number",
+        "type": "numeric",
+        "aliases": [
+          "cycle",
+          "cycle number",
+          "cycles",
+          "n"
+        ]
+      },
+      {
+        "key": "sample",
+        "label": "Sample name",
+        "type": "categorical",
+        "aliases": [
+          "sample",
+          "group",
+          "cell",
+          "condition"
+        ]
+      },
+      {
+        "key": "capacity",
+        "label": "Capacity",
+        "type": "numeric",
+        "aliases": [
+          "capacity",
+          "specific capacity",
+          "discharge capacity",
+          "mah/g"
+        ]
+      }
+    ],
+    "optional_semantic_fields": [
+      {
+        "key": "error",
+        "label": "Error bar",
+        "type": "numeric",
+        "aliases": [
+          "error",
+          "std",
+          "sd",
+          "sem"
+        ]
+      },
+      {
+        "key": "retention",
+        "label": "Capacity retention",
+        "type": "numeric",
+        "aliases": [
+          "retention",
+          "capacity retention"
+        ]
+      }
+    ],
+    "default_column_aliases": {
+      "cycle": [
+        "cycle",
+        "cycle number",
+        "cycles",
+        "n"
+      ],
+      "sample": [
+        "sample",
+        "group",
+        "cell",
+        "condition"
+      ],
+      "capacity": [
+        "capacity",
+        "specific capacity",
+        "discharge capacity",
+        "mah/g"
+      ],
+      "error": [
+        "error",
+        "std",
+        "sd",
+        "sem"
+      ],
+      "retention": [
+        "retention",
+        "capacity retention"
+      ]
+    },
+    "chart_structure": {
+      "x": "cycle",
+      "left_y": "capacity",
+      "group_by": "sample",
+      "layers": [
+        {
+          "type": "line",
+          "field": "capacity",
+          "axis": "left",
+          "grouped": true
+        }
+      ]
+    },
+    "plot_layers": [
+      {
+        "type": "line",
+        "field": "capacity",
+        "axis": "left",
+        "grouped": true
+      }
+    ],
+    "default_labels": {
+      "x": "Cycle number",
+      "left_y": "Capacity (mAh g-1)",
+      "right_y": "Coulombic efficiency (%)"
+    },
+    "example_rows": [
+      {
+        "cycle": 1,
+        "sample": "Control",
+        "capacity": 120.5
+      },
+      {
+        "cycle": 2,
+        "sample": "Control",
+        "capacity": 119.7
+      },
+      {
+        "cycle": 1,
+        "sample": "Modified",
+        "capacity": 135.8
+      },
+      {
+        "cycle": 2,
+        "sample": "Modified",
+        "capacity": 136.2
+      }
+    ],
+    "style_preset": {
+      "font_family": "Arial",
+      "font_size": 8,
+      "axis_label_size": 8,
+      "tick_size": 7,
+      "line_width": 0.9,
+      "marker_size": 2.5,
+      "axis_line_width": 0.75,
+      "tick_width": 0.75,
+      "tick_direction": "in",
+      "background": "white",
+      "grid": false,
+      "palette": "minimal_mono",
+      "legend_position": "best"
+    },
+    "layout_preset": {
+      "width_mm": 85,
+      "height_mm": 58,
+      "margin_left": 12,
+      "margin_right": 5,
+      "margin_top": 5,
+      "margin_bottom": 10
+    },
+    "quick_controls": [
+      "show_markers",
+      "legend_position",
+      "palette",
+      "axis_labels",
+      "normalize_retention"
+    ],
+    "advanced_controls": [
+      "line_width",
+      "marker_size",
+      "font_size",
+      "axis_line_width",
+      "tick_width",
+      "x_range",
+      "left_y_range",
+      "figure_size",
+      "dpi"
+    ]
+  }
+]

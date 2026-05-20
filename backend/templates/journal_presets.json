@@ -1,0 +1,57 @@
+[
+  {
+    "id": "nature_single",
+    "name": "Nature single column",
+    "width_mm": 89,
+    "height_mm": 70,
+    "default_font": "Arial",
+    "font_size": 8,
+    "panel_label_size": 10,
+    "line_width": 0.8,
+    "dpi": 600
+  },
+  {
+    "id": "nature_double",
+    "name": "Nature double column",
+    "width_mm": 183,
+    "height_mm": 130,
+    "default_font": "Arial",
+    "font_size": 8,
+    "panel_label_size": 10,
+    "line_width": 0.8,
+    "dpi": 600
+  },
+  {
+    "id": "acs_single",
+    "name": "ACS single column",
+    "width_mm": 85,
+    "height_mm": 68,
+    "default_font": "Arial",
+    "font_size": 8,
+    "panel_label_size": 9,
+    "line_width": 0.8,
+    "dpi": 600
+  },
+  {
+    "id": "acs_double",
+    "name": "ACS double column",
+    "width_mm": 178,
+    "height_mm": 128,
+    "default_font": "Arial",
+    "font_size": 8,
+    "panel_label_size": 9,
+    "line_width": 0.8,
+    "dpi": 600
+  },
+  {
+    "id": "custom",
+    "name": "Custom",
+    "width_mm": 160,
+    "height_mm": 110,
+    "default_font": "Arial",
+    "font_size": 8,
+    "panel_label_size": 10,
+    "line_width": 0.8,
+    "dpi": 300
+  }
+]
