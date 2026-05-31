@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="340" viewBox="0 0 480 340">
+ <g id="OriginLayer">
+  <rect x="0" y="0" width="480" height="340" style="fill:#ffffff;"/>
+  <rect id="PlotArea" x="70" y="30" width="380" height="250" style="fill:#ffffff;"/>
+  <!-- full four-sided frame (Origin default) -->
+  <path id="Frame" d="M70 30 L450 30 L450 280 L70 280 Z" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <!-- X ticks, drawn inward (Origin default tick direction) -->
+  <g id="XAxisTicks">
+   <path d="M70 280 L70 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M124 280 L124 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M178 280 L178 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M232 280 L232 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M286 280 L286 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M340 280 L340 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M394 280 L394 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M448 280 L448 273" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="XAxisLabels">
+   <text x="70" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">10</text>
+   <text x="124" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">20</text>
+   <text x="178" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">30</text>
+   <text x="232" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">40</text>
+   <text x="286" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">50</text>
+   <text x="340" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">60</text>
+   <text x="394" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">70</text>
+   <text x="448" y="296" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">80</text>
+  </g>
+  <!-- Y ticks, inward -->
+  <g id="YAxisTicks">
+   <path d="M70 280 L77 280" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 230 L77 230" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 180 L77 180" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 130 L77 130" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 80 L77 80" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 30 L77 30" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <text id="xlabel" x="260" y="318" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">2-Theta (degree)</text>
+  <text id="ylabel" x="26" y="155" transform="rotate(-90 26 155)" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Intensity (a.u.)</text>
+  <!-- three stacked XRD patterns -->
+  <polyline id="Curve1" points="70,252 110,251 138,250 150,212 162,250 205,251 232,250 246,205 258,250 300,251 345,250 362,232 376,250 420,251 450,252" style="fill:none;stroke:#1f6fb2;stroke-width:1.3;"/>
+  <polyline id="Curve2" points="70,172 112,171 140,170 151,138 163,170 210,171 235,170 248,128 260,170 305,171 350,170 368,148 382,170 425,171 450,172" style="fill:none;stroke:#c0392b;stroke-width:1.3;"/>
+  <polyline id="Curve3" points="70,92 115,91 142,90 152,58 164,90 215,91 238,90 250,70 262,90 312,91 352,90 372,72 388,90 430,91 450,92" style="fill:none;stroke:#2a9d4a;stroke-width:1.3;"/>
+  <!-- legend -->
+  <g id="Legend">
+   <path d="M340 50 L362 50" style="fill:none;stroke:#1f6fb2;stroke-width:1.3;"/>
+   <text x="368" y="54" style="font-family:Arial;font-size:11px;fill:#000000;">Sample A</text>
+   <path d="M340 68 L362 68" style="fill:none;stroke:#c0392b;stroke-width:1.3;"/>
+   <text x="368" y="72" style="font-family:Arial;font-size:11px;fill:#000000;">Sample B</text>
+   <path d="M340 86 L362 86" style="fill:none;stroke:#2a9d4a;stroke-width:1.3;"/>
+   <text x="368" y="90" style="font-family:Arial;font-size:11px;fill:#000000;">Sample C</text>
+  </g>
+ </g>
+</svg>

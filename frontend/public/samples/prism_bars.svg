@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="320" viewBox="0 0 420 320">
+ <g id="prism_figure">
+  <rect x="0" y="0" width="420" height="320" style="fill:#ffffff;"/>
+  <!-- open axes: left + bottom only (Prism default) -->
+  <path id="y_axis" d="M70 40 L70 270" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <path id="x_axis" d="M70 270 L390 270" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <!-- Y ticks, outward -->
+  <g id="y_ticks">
+   <path d="M64 270 L70 270" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M64 215 L70 215" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M64 160 L70 160" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M64 105 L70 105" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M64 50 L70 50" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="y_ticklabels">
+   <text x="58" y="274" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">0</text>
+   <text x="58" y="219" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">50</text>
+   <text x="58" y="164" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">100</text>
+   <text x="58" y="109" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">150</text>
+   <text x="58" y="54" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">200</text>
+  </g>
+  <text id="ylabel" x="24" y="155" transform="rotate(-90 24 155)" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Cell viability (%)</text>
+  <!-- bars (single group, one colour) -->
+  <g id="bars">
+   <rect x="95" y="150" width="40" height="120" style="fill:#4878a8;stroke:#2f567a;stroke-width:0.6;"/>
+   <rect x="160" y="110" width="40" height="160" style="fill:#4878a8;stroke:#2f567a;stroke-width:0.6;"/>
+   <rect x="225" y="95" width="40" height="175" style="fill:#4878a8;stroke:#2f567a;stroke-width:0.6;"/>
+   <rect x="290" y="130" width="40" height="140" style="fill:#4878a8;stroke:#2f567a;stroke-width:0.6;"/>
+  </g>
+  <!-- error bars (T caps) -->
+  <g id="errorbars">
+   <path d="M115 138 L115 162 M108 138 L122 138 M108 162 L122 162" style="fill:none;stroke:#222222;stroke-width:1;"/>
+   <path d="M180 98 L180 122 M173 98 L187 98 M173 122 L187 122" style="fill:none;stroke:#222222;stroke-width:1;"/>
+   <path d="M245 84 L245 106 M238 84 L252 84 M238 106 L252 106" style="fill:none;stroke:#222222;stroke-width:1;"/>
+   <path d="M310 119 L310 141 M303 119 L317 119 M303 141 L317 141" style="fill:none;stroke:#222222;stroke-width:1;"/>
+  </g>
+  <!-- individual data points overlaid (Prism style) -->
+  <g id="points">
+   <circle cx="109" cy="156" r="2.4" style="fill:#16314f;"/>
+   <circle cx="118" cy="146" r="2.4" style="fill:#16314f;"/>
+   <circle cx="114" cy="151" r="2.4" style="fill:#16314f;"/>
+   <circle cx="174" cy="115" r="2.4" style="fill:#16314f;"/>
+   <circle cx="186" cy="106" r="2.4" style="fill:#16314f;"/>
+   <circle cx="180" cy="112" r="2.4" style="fill:#16314f;"/>
+   <circle cx="239" cy="100" r="2.4" style="fill:#16314f;"/>
+   <circle cx="251" cy="91" r="2.4" style="fill:#16314f;"/>
+   <circle cx="245" cy="97" r="2.4" style="fill:#16314f;"/>
+   <circle cx="304" cy="135" r="2.4" style="fill:#16314f;"/>
+   <circle cx="316" cy="126" r="2.4" style="fill:#16314f;"/>
+   <circle cx="310" cy="131" r="2.4" style="fill:#16314f;"/>
+  </g>
+  <!-- category labels -->
+  <g id="x_ticklabels">
+   <text x="115" y="285" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">Control</text>
+   <text x="180" y="285" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">Drug A</text>
+   <text x="245" y="285" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">Drug B</text>
+   <text x="310" y="285" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">Drug C</text>
+  </g>
+ </g>
+</svg>

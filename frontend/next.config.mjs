@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone"
+  reactStrictMode: false // fabric.js canvas init doesn't like double-invoked effects in dev
 };
 
 export default nextConfig;

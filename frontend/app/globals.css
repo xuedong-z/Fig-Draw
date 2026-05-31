@@ -2,19 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
 
 html,
 body {
-  min-height: 100%;
-  background: #f6f7f4;
-  color: #18202a;
+  height: 100%;
 }
 
 body {
+  @apply bg-canvas text-ink font-sans antialiased;
   margin: 0;
+  overflow: hidden; /* the app is a fixed full-viewport workspace */
 }
 
 button,
@@ -24,14 +28,80 @@ textarea {
   font: inherit;
 }
 
-.control-label {
-  @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+/* Thin, dark scrollbars to match the tool UI */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a4452 transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #3a4452;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #4a5563;
+  background-clip: content-box;
 }
 
-.field {
-  @apply h-9 w-full rounded border border-rule bg-white px-2 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15;
+@layer components {
+  /* Reusable small UI atoms */
+  .tool-btn {
+    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink/90
+           transition-colors hover:bg-hover disabled:opacity-40 disabled:hover:bg-transparent;
+  }
+  .tool-btn-primary {
+    @apply bg-accent text-white hover:bg-accent-hover hover:text-white;
+  }
+  .panel-title {
+    @apply text-2xs font-semibold uppercase tracking-wider text-muted;
+  }
+  .field-label {
+    @apply block text-2xs font-medium uppercase tracking-wide text-muted;
+  }
+  .input-dark {
+    @apply w-full rounded-md border border-line bg-elevated px-2 py-1.5 text-sm text-ink
+           outline-none focus:border-accent;
+  }
+  .chip {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1 rounded-full border border-line
+           bg-elevated px-2 py-1 text-2xs text-muted transition-colors hover:text-ink;
+  }
+  .chip-on {
+    @apply border-accent/50 bg-accent/15 text-ink;
+  }
 }
 
-.panel-shell {
-  @apply border border-rule bg-white shadow-soft;
+/* Range slider styling for the dark UI */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: #2a313c;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4c8dff;
+  cursor: pointer;
+  border: 2px solid #0e1116;
+}
+
+/* The simulated journal paper uses real serif typography */
+.journal-paper {
+  font-family: Georgia, Cambria, "Times New Roman", serif;
+  color: #1a1a1a;
+}
+.journal-paper .body-col {
+  text-align: justify;
+  hyphens: auto;
 }

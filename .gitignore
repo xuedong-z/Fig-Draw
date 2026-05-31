@@ -1,14 +1,29 @@
+# Toolchain (portable node / uv live here)
+.tools/
+.venv/
+
+# Runtime / logs
+.run/
+logs/
+output/
+.env
+.env.local
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dev-server.*.log
+frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Python leftovers (old product)
 __pycache__/
 *.py[cod]
 .pytest_cache/
 
-frontend/node_modules/
-frontend/.next/
-frontend/dev-server.*.log
+# Safety archive of the previous product (Scientific Figure Studio)
+.archive_old_scifig/
 
-.tools/
-.venv/
-.run/
-logs/
-.env
-.env.local
+# Claude Code local settings (keep launch.json, drop personal local settings)
+.claude/settings.local.json

@@ -1,43 +1,27 @@
-# Scientific Figure Studio
+# SciCompose
 
-MVP v0.1 for reference-based scientific plotting and multi-panel paper figure composition.
+A browser-based **post-processing editor for scientific figures**. You bring SVGs
+you already exported from Origin, matplotlib, GraphPad, etc.; SciCompose helps you
+assemble them into one publication-ready figure — arrange panels, recognize and
+recolor data series, set emphasis, unify type and line weights, and export a
+submission-grade PNG + a re-editable SVG.
 
-## Modules
+It is **not** a plotting tool and has **no backend, no data import, and no AI** —
+all element recognition is done with front-end rules.
 
-- `backend/`: FastAPI API for data upload, parsing, matplotlib plot generation, reference templates, journal presets, and PNG/PDF figure export.
-- `frontend/`: Next.js + React + TypeScript + Tailwind UI for Plot Studio and Figure Composer.
+## What it does
 
-## Easiest Start For Non-Programmers
+1. **Import** exported SVG figures as panels.
+2. **Arrange** them on a simulated Nature-style paper page (drag / resize / snap).
+3. **Recognize** structural elements (axes, ticks, grid, background, data,
+   scatter, legend, text) automatically; correct any role by hand.
+4. **Recolor** series from a curated palette library (lines, fills, gradients).
+5. **Emphasize** the key result (primary / secondary / auxiliary).
+6. **Unify** fonts, sizes, and line widths across the whole figure.
+7. **Export** PNG at 300 / 600 / 1200 DPI and a re-editable SVG, at journal
+   widths (Nature 89 mm / 183 mm and more).
 
-On Windows, double-click:
-
-```text
-Start Scientific Figure Studio.bat
-```
-
-The first launch may take several minutes because it automatically prepares portable Node.js, a Python virtual environment, backend dependencies, and frontend dependencies. After that it opens:
-
-```text
-http://127.0.0.1:3000
-```
-
-When finished, double-click:
-
-```text
-Stop Scientific Figure Studio.bat
-```
-
-If the app is already running, `Open Scientific Figure Studio.url` opens it in the browser.
-
-## Developer Run Backend
-
-```powershell
-cd backend
-python -m pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-## Run Frontend
+## Run
 
 ```powershell
 cd frontend
@@ -47,13 +31,19 @@ npm run dev
 
 Open `http://127.0.0.1:3000`.
 
-## Test Flow
+## Try it
 
-1. Open Plot Studio.
-2. Choose `Battery & Electrochemistry` -> `Long cycling plot`.
-3. Select a reference template, such as `Nature-style dual-axis long cycling comparison`.
-4. Review the required semantic columns and download the example CSV if needed.
-5. Upload `backend/sample_data/long_cycling_example.csv`.
-6. Confirm template-aware mapping: `cycle`, `sample`, `capacity`, and optional `coulombic_efficiency`.
-7. Generate the publication-style plot, adjust quick controls, and save it as Plot A-D.
-8. Open Figure Composer, assign saved plots to panels, and export PNG or PDF.
+1. Click **Import** and choose an SVG — or load the bundled sample
+   `frontend/public/samples/electro.svg`.
+2. The panel appears on the paper. Drag/resize it; add more panels and they snap
+   to each other and to the page guides.
+3. Open the **Palette** tab and apply a colorblind-safe palette
+   (e.g. Okabe–Ito) — every data series and its legend swatch recolor together.
+4. Use **Emphasis**, **Type**, and **Tune** to refine; correct any mis-recognized
+   element from the left panel.
+5. Open **Export**, pick a journal width and DPI, and export PNG / SVG.
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS · fabric.js ·
+Zustand. See [AGENTS.md](AGENTS.md) for the module map and architecture notes.

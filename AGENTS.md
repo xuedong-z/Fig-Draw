@@ -1,296 +1,130 @@
-\# AGENTS.md
-
-
-
-你是 Scientific Figure Studio 项目的高级全栈工程师、科研绘图专家和论文 Figure 排版专家。
-
-
-
-这个项目不是普通 chart demo，而是一个面向科研人员的论文 Figure 生成与排版平台。
-
-
-
-\## 产品目标
-
-
-
-用户应该可以：
-
-
-
-1\. 上传 TXT / CSV / Excel 原始实验数据
-
-2\. 选择科研图类型
-
-3\. 选择高水平论文 reference 模板
-
-4\. 用自己的数据生成 reference 风格的科研图
-
-5\. 手动调整线宽、字体、字号、颜色、坐标轴、legend 等参数
-
-6\. 保存多个 plot
-
-7\. 把多个 plot 组合成 A/B/C/D multi-panel figure
-
-8\. 按期刊格式统一排版
-
-9\. 导出 PNG / PDF
-
-
-
-\## 核心产品差异
-
-
-
-本项目最重要的差异不是“能画图”，而是：
-
-
-
-\- reference-based plotting
-
-\- journal-style formatting
-
-\- multi-panel figure composition
-
-\- global style unification
-
-
-
-也就是说，用户不是从零调图，而是选择一个高质量论文图模板，然后用自己的数据生成类似风格的图。
-
-
-
-\## 开发原则
-
-
-
-\- 不要做成简单 demo
-
-\- 不要只做静态 UI
-
-\- 不要只画假图
-
-\- 所有功能尽量真实可用
-
-\- 代码必须模块化
-
-\- 模板必须配置化
-
-\- 绘图逻辑和 UI 分离
-
-\- 期刊模板和 reference 模板不要写死在组件里
-
-\- 每次修改后检查是否破坏完整流程
-
-
-
-\## 模块划分
-
-
-
-项目应包含：
-
-
-
-\- data upload
-
-\- data parser
-
-\- data preview
-
-\- data mapping
-
-\- reference template library
-
-\- plot generator
-
-\- style control
-
-\- saved plots
-
-\- figure composer
-
-\- journal presets
-
-\- export system
-
-
-
-\## 第一阶段优先级
-
-
-
-优先完成完整流程：
-
-
-
-上传数据 → 选择图类型 → 选择 reference → 生成图 → 调参数 → 保存 plot → 组合 figure → 导出
-
-
-
-不要一开始扩展太多高级功能。
-
-
-
-\## 绘图质量要求
-
-
-
-生成图必须尽量接近论文风格：
-
-
-
-\- white background
-
-\- clean axis
-
-\- proper font size
-
-\- controlled line width
-
-\- professional color palette
-
-\- clear labels
-
-\- no unnecessary chart junk
-
-\- high-resolution export
-
-
-
-不要使用 matplotlib 默认风格直接输出。
-
-
-
-\## Reference Template 要求
-
-
-
-reference template 必须作为配置文件存在。
-
-
-
-每个 template 至少包含：
-
-
-
-\- id
-
-\- name
-
-\- category
-
-\- chart\_type
-
-\- description
-
-\- required\_fields
-
-\- optional\_fields
-
-\- style
-
-\- layout
-
-
-
-\## Journal Preset 要求
-
-
-
-journal preset 必须作为配置文件存在。
-
-
-
-第一版至少包含：
-
-
-
-\- Nature single column
-
-\- Nature double column
-
-\- ACS single column
-
-\- ACS double column
-
-\- Custom
-
-
-
-\## Figure Composer 要求
-
-
-
-Figure Composer 需要模拟论文页面，而不是普通空白画布。
-
-
-
-需要包含：
-
-
-
-\- article text placeholder
-
-\- figure area
-
-\- saved plots panel
-
-\- layout preset
-
-\- panel labels
-
-\- global font control
-
-\- global line width control
-
-\- panel spacing control
-
-\- export control
-
-
-
-\## 每次完成任务后必须汇报
-
-
-
-请按照以下格式输出：
-
-
-
-1\. 完成了什么
-
-2\. 修改了哪些文件
-
-3\. 如何运行
-
-4\. 如何测试
-
-5\. 当前不足
-
-6\. 下一步建议
-
-
-
-\## 自我检查
-
-
-
-每次结束前请检查：
-
-
-
-\- 是否真的能上传数据
-
-\- 是否真的能生成图
-
-\- 是否真的能保存 plot
-
-\- 是否真的能进入 Figure Composer
-
-\- 是否真的能导出
-
-\- 是否有明显报错
-
-\- 是否符合 Scientific Figure Studio 的产品方向
-
+# AGENTS.md
+
+This repository is **SciCompose** — a browser-based **post-processing** editor for
+scientific figures.
+
+It is **not** a plotting tool, a template database, or a data-analysis app. The
+user has *already* drawn their figures in Origin / matplotlib / GraphPad / etc.
+and exported **SVG**. SciCompose takes those SVGs and helps them assemble,
+recognize, recolor, emphasize, unify, and export a submission-grade composite
+figure. There is no data import, no chart generation, and no backend.
+
+> A previous product ("Scientific Figure Studio", a FastAPI + template-database
+> plotting app) lived in this repo and was **intentionally removed**. Do not
+> reintroduce a backend, a template/semantic-mapping flow, or data upload.
+
+---
+
+## What SciCompose does (scope)
+
+1. **Import** one or more exported SVG figures as *panels*.
+2. **Arrange** panels freely on a simulated Nature-style paper inner page
+   (drag / resize / snap / smart guides).
+3. **Recognize** each panel's structural elements (background, axis/frame,
+   ticks, grid, data series, scatter, legend, text) using **pure front-end
+   rules** — no AI / LLM. The user can correct any role.
+4. **Recolor** data series with a large curated palette library (lines + fills +
+   gradients), preserving per-stop lightness and fill-opacity.
+5. **Emphasize** series by importance (primary / secondary / auxiliary / normal).
+6. **Unify** fonts, sizes, and line widths across the figure.
+7. **Export** a submission-grade PNG (300 / 600 / 1200 DPI) and a re-editable
+   SVG, at journal widths (e.g. Nature 89 mm / 183 mm).
+
+## Hard constraints (do not violate)
+
+- **No AI/LLM** anywhere in recognition — all classification is rule-based
+  (`lib/svg/roles.ts`).
+- **No backend.** Everything runs in the browser.
+- **No `localStorage`/persistence for core document state.** The figure lives in
+  memory (Zustand). Undo/redo is in-memory snapshots.
+- The **SVG string is the single source of truth** for a panel. All edits are
+  pure `string -> string` transforms that read/write `data-sc*` attributes; the
+  React model is updated alongside but never replaces the SVG.
+
+---
+
+## Tech stack
+
+Next.js 16 (App Router, Turbopack) · React 19 · TypeScript 5.7 · Tailwind 3.4 ·
+fabric.js 6.9 (canvas drag/resize/snap) · Zustand 5 (state + history) ·
+lucide-react (icons). SVG parsing/serialization via the browser `DOMParser` /
+`XMLSerializer`; PNG export via `canvas.toBlob` with DPI scaling.
+
+---
+
+## Module map (spec module -> code)
+
+| Module | What | Where |
+| --- | --- | --- |
+| A | Nature paper inner page | `frontend/components/NaturePage.tsx` |
+| B | Elastic fabric.js canvas (drag/resize/snap/guides) | `frontend/components/FigureCanvas.tsx` |
+| C | SVG parsing engine (scid tagging, geometry, series aggregation, warnings) | `frontend/lib/svg/parser.ts` |
+| D1 | Rule-based role recognition | `frontend/lib/svg/roles.ts` |
+| D2 | Role-correction UI | `frontend/components/LeftSidebar.tsx`, `frontend/components/panels/TunePanel.tsx` |
+| E | Palette library + recoloring | `frontend/lib/palettes.ts`, `frontend/components/panels/PalettePanel.tsx`, `frontend/lib/svg/mutate.ts` |
+| F | Primary/secondary emphasis | `frontend/components/panels/EmphasisPanel.tsx`, `mutate.ts` |
+| G | Font/size/line-width unification | `frontend/components/panels/TypographyPanel.tsx`, `mutate.ts` |
+| H | Export PNG/SVG at journal sizes | `frontend/lib/export.ts`, `frontend/components/panels/ExportPanel.tsx`, `frontend/lib/journals.ts` |
+| I | Undo/redo | `frontend/lib/store.ts` (`past`/`future` snapshots) |
+
+Shell/layout: `frontend/components/Editor.tsx`, `TopBar.tsx`, `RightSidebar.tsx`,
+`Messages.tsx`. Color + style helpers: `frontend/lib/svg/colorUtils.ts`,
+`styleAccessor.ts`. Types: `frontend/lib/types.ts`. Sample SVGs:
+`frontend/public/samples/`.
+
+### Data flow
+
+`importSvg(name, raw)` → `parseSvgString` (tag every drawable with `data-scid`,
+measure geometry offscreen, detect text-as-path / bitmap / color-scale, run
+`assignRoles`, `aggregateSeries`, `pairLegends`) → store panel whose `svg` string
+carries `data-scid` / `data-scrole` / `data-scseries`. Recolor/emphasis/typography
+edits go through `lib/svg/mutate.ts` and update both the SVG string and the
+series model. `FIG_PX_PER_MM = 4`, so figure-space px map 1:1 to CSS px.
+
+---
+
+## Run / verify
+
+```powershell
+cd frontend
+npm install
+npm run dev      # http://127.0.0.1:3000
+```
+
+A portable Node + Next launch config also exists at `.claude/launch.json`
+(serverId `scicompose`, port 3000).
+
+Type-check (portable Node):
+
+```bash
+cd frontend
+export PATH="/d/Fig draw/.tools/node-v22.13.1-win-x64:$PATH"
+node ./node_modules/typescript/bin/tsc --noEmit
+```
+
+---
+
+## Gotchas (learned the hard way)
+
+- **fabric.js + React DOM ownership.** `new Canvas(reactCanvasEl)` wraps the
+  React-managed `<canvas>` in a `.canvas-container`, which makes React's later
+  reconciliation throw `NotFoundError`. The canvas is therefore created
+  **imperatively** inside an isolated host div React never renders into, and the
+  SVG overlays live in a **separate** React subtree. Keep it that way.
+- **Color classification.** Achromatic (black/white/gray) ⇒ structure; saturated
+  ⇒ data. Filled **markers/scatter are identified by their fill**, lines by their
+  **stroke** (`seriesColorOf` in `parser.ts`).
+- **Recognition ordering.** matplotlib nests ticks under a group named
+  `matplotlib.axis_N`; tick detection therefore runs **before** the axis hint,
+  and the axis hint deliberately excludes the bare word `axis`. The plot frame is
+  detected as a thin, unfilled, box-shaped path spanning the plot.
+- **Legend swatches** get role `legend` (not `data`) so they don't inflate the
+  series count, but `recolorSeries`/emphasis also recolor `series.legendElementId`
+  to keep the legend in sync.
+- The platform shell is **PowerShell**; the Bash tool uses Git Bash, so use POSIX
+  paths (`/d/Fig draw/...`).
+
+## Conventions
+
+- Only commit when the user explicitly asks.
+- Do not kill the user's other dev servers (unrelated Vite apps on 5173/5174).

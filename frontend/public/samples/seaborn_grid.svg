@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="320" viewBox="0 0 460 320">
+ <g id="figure_1">
+  <rect id="figure_bg" x="0" y="0" width="460" height="320" style="fill:#ffffff;"/>
+  <g id="axes_1">
+   <rect id="axes_bg" x="60" y="30" width="360" height="230" style="fill:#eaeaf2;"/>
+   <!-- seaborn white gridlines -->
+   <g id="grid">
+    <path d="M60 210 L420 210" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M60 160 L420 160" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M60 110 L420 110" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M60 60 L420 60" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M120 30 L120 260" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M180 30 L180 260" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M240 30 L240 260" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M300 30 L300 260" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+    <path d="M360 30 L360 260" style="fill:none;stroke:#ffffff;stroke-width:1;"/>
+   </g>
+   <!-- ticks (outward) -->
+   <g id="xticks">
+    <path d="M60 260 L60 264" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M120 260 L120 264" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M180 260 L180 264" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M240 260 L240 264" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M300 260 L300 264" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M360 260 L360 264" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M420 260 L420 264" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+   </g>
+   <g id="yticks">
+    <path d="M56 260 L60 260" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M56 210 L60 210" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M56 160 L60 160" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M56 110 L60 110" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+    <path d="M56 60 L60 60" style="fill:none;stroke:#555555;stroke-width:0.8;"/>
+   </g>
+   <g id="xticklabels">
+    <text x="60" y="276" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#333333;">0</text>
+    <text x="120" y="276" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#333333;">2</text>
+    <text x="180" y="276" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#333333;">4</text>
+    <text x="240" y="276" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#333333;">6</text>
+    <text x="300" y="276" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#333333;">8</text>
+    <text x="360" y="276" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#333333;">10</text>
+    <text x="420" y="276" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#333333;">12</text>
+   </g>
+   <g id="yticklabels">
+    <text x="50" y="263" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#333333;">0</text>
+    <text x="50" y="213" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#333333;">1</text>
+    <text x="50" y="163" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#333333;">2</text>
+    <text x="50" y="113" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#333333;">3</text>
+    <text x="50" y="63" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#333333;">4</text>
+   </g>
+   <text id="xlabel" x="240" y="298" style="font-family:DejaVu Sans;font-size:12px;text-anchor:middle;fill:#222222;">Time (s)</text>
+   <text id="ylabel" x="28" y="145" transform="rotate(-90 28 145)" style="font-family:DejaVu Sans;font-size:12px;text-anchor:middle;fill:#222222;">Signal (a.u.)</text>
+   <polyline id="line_1" points="60,200 120,170 180,150 240,140 300,135 360,132 420,130" style="fill:none;stroke:#4c72b0;stroke-width:1.8;"/>
+   <polyline id="line_2" points="60,90 120,110 180,135 240,160 300,180 360,195 420,205" style="fill:none;stroke:#dd8452;stroke-width:1.8;"/>
+   <polyline id="line_3" points="60,150 120,128 180,156 240,124 300,150 360,118 420,142" style="fill:none;stroke:#55a868;stroke-width:1.8;"/>
+   <g id="legend_1">
+    <path d="M330 52 L352 52" style="fill:none;stroke:#4c72b0;stroke-width:1.8;"/>
+    <text x="358" y="56" style="font-family:DejaVu Sans;font-size:10px;fill:#333333;">Control</text>
+    <path d="M330 70 L352 70" style="fill:none;stroke:#dd8452;stroke-width:1.8;"/>
+    <text x="358" y="74" style="font-family:DejaVu Sans;font-size:10px;fill:#333333;">Heated</text>
+    <path d="M330 88 L352 88" style="fill:none;stroke:#55a868;stroke-width:1.8;"/>
+    <text x="358" y="92" style="font-family:DejaVu Sans;font-size:10px;fill:#333333;">Cooled</text>
+   </g>
+  </g>
+ </g>
+</svg>

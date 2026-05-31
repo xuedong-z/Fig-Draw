@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="460" height="320" viewBox="0 0 460 320">
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M0 0 L460 0 L460 320 L0 320 Z" style="fill:#ffffff;"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M60 30 L420 30 L420 250 L60 250 Z" style="fill:#f4f4f4;"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1"><g id="line2d_1"><path d="M60 250 L60 255" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_1"><text x="60" y="266" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#222222;">0.0</text></g></g>
+    <g id="xtick_2"><g id="line2d_2"><path d="M120 250 L120 255" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_2"><text x="120" y="266" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#222222;">0.2</text></g></g>
+    <g id="xtick_3"><g id="line2d_3"><path d="M180 250 L180 255" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_3"><text x="180" y="266" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#222222;">0.4</text></g></g>
+    <g id="xtick_4"><g id="line2d_4"><path d="M240 250 L240 255" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_4"><text x="240" y="266" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#222222;">0.6</text></g></g>
+    <g id="xtick_5"><g id="line2d_5"><path d="M300 250 L300 255" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_5"><text x="300" y="266" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#222222;">0.8</text></g></g>
+    <g id="xtick_6"><g id="line2d_6"><path d="M360 250 L360 255" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_6"><text x="360" y="266" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#222222;">1.0</text></g></g>
+    <g id="xtick_7"><g id="line2d_7"><path d="M420 250 L420 255" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_7"><text x="420" y="266" style="font-family:DejaVu Sans;font-size:10px;text-anchor:middle;fill:#222222;">1.2</text></g></g>
+    <g id="text_xlabel"><text x="240" y="292" style="font-family:DejaVu Sans;font-size:12px;text-anchor:middle;fill:#111111;">Potential (V vs. RHE)</text></g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1"><g id="line2d_8"><path d="M55 250 L60 250" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_8"><text x="50" y="253" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#222222;">0</text></g></g>
+    <g id="ytick_2"><g id="line2d_9"><path d="M55 195 L60 195" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_9"><text x="50" y="198" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#222222;">1</text></g></g>
+    <g id="ytick_3"><g id="line2d_10"><path d="M55 140 L60 140" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_10"><text x="50" y="143" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#222222;">2</text></g></g>
+    <g id="ytick_4"><g id="line2d_11"><path d="M55 85 L60 85" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_11"><text x="50" y="88" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#222222;">3</text></g></g>
+    <g id="ytick_5"><g id="line2d_12"><path d="M55 30 L60 30" style="fill:none;stroke:#222222;stroke-width:0.8;"/></g><g id="text_12"><text x="50" y="33" style="font-family:DejaVu Sans;font-size:10px;text-anchor:end;fill:#222222;">4</text></g></g>
+    <g id="text_ylabel"><text x="20" y="140" transform="rotate(-90 20 140)" style="font-family:DejaVu Sans;font-size:12px;text-anchor:middle;fill:#111111;">Current density (mA cm-2)</text></g>
+   </g>
+   <g id="line2d_data1">
+    <path d="M60 220 L120 180 L180 150 L240 130 L300 120 L360 115 L420 112" style="fill:none;stroke:#1f77b4;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;"/>
+   </g>
+   <g id="line2d_data2">
+    <path d="M60 240 L120 225 L180 200 L240 165 L300 120 L360 80 L420 50" style="fill:none;stroke:#ff7f0e;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;"/>
+   </g>
+   <g id="PathCollection_1">
+    <circle cx="90" cy="210" r="3.2" style="fill:#2ca02c;stroke:#1a661a;stroke-width:0.6;"/>
+    <circle cx="150" cy="178" r="3.2" style="fill:#2ca02c;stroke:#1a661a;stroke-width:0.6;"/>
+    <circle cx="210" cy="152" r="3.2" style="fill:#2ca02c;stroke:#1a661a;stroke-width:0.6;"/>
+    <circle cx="270" cy="138" r="3.2" style="fill:#2ca02c;stroke:#1a661a;stroke-width:0.6;"/>
+    <circle cx="330" cy="112" r="3.2" style="fill:#2ca02c;stroke:#1a661a;stroke-width:0.6;"/>
+    <circle cx="390" cy="96" r="3.2" style="fill:#2ca02c;stroke:#1a661a;stroke-width:0.6;"/>
+   </g>
+   <g id="patch_3">
+    <path d="M60 30 L60 250 L420 250" style="fill:none;stroke:#000000;stroke-width:1.0;"/>
+   </g>
+   <g id="legend_1">
+    <path d="M312 52 L332 52" style="fill:none;stroke:#1f77b4;stroke-width:1.6;"/>
+    <g id="text_leg1"><text x="338" y="55" style="font-family:DejaVu Sans;font-size:10px;fill:#222222;">Catalyst A</text></g>
+    <path d="M312 68 L332 68" style="fill:none;stroke:#ff7f0e;stroke-width:1.6;"/>
+    <g id="text_leg2"><text x="338" y="71" style="font-family:DejaVu Sans;font-size:10px;fill:#222222;">Catalyst B</text></g>
+   </g>
+  </g>
+ </g>
+</svg>
