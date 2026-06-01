@@ -50,4 +50,4 @@ export function fakeParagraph(seed: number, sentences = 4): string {
 }
 
 export const FIGURE_CAPTION_DEFAULT =
-  "Electrochemical characterization of the synthesized electrodes. (a) Representative voltage profiles, (b) rate capability, (c) long-term cycling stability, and (d) the corresponding impedance response.";
+  "XXXX XXXXXXXXXXXXX XX XXX XXXXXXXXXX XXXXXXXXX. (a) XXXXXXXXXXXX XXXXXXX XXXXXXXX, (b) XXXX XXXXXXXXXX, (c) XXXX-XXXX XXXXXXX XXXXXXXXX, XXX (d) XXX XXXXXXXXXXXX XXXXXXXXX XXXXXXXX.";
