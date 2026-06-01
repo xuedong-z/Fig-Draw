@@ -23,30 +23,43 @@ import {
   recolorSeries as recolorSeriesSvg,
   setElementRole as setRoleSvg,
   setElementStyle,
-  unifyTypography as unifyTypographySvg
+  setElementHidden as setHiddenSvg,
+  deleteElement as deleteElementSvg,
+  unifyTypography as unifyTypographySvg,
+  readElementColor as readElementColorSvg,
+  panelScale,
+  redrawAxisFrame,
+  setBackgroundHidden as setBgHiddenSvg,
+  applyGradientFill as applyGradientFillSvg,
+  setSolidFill as setSolidFillSvg,
+  type AxisFrameStyle
 } from "./svg/mutate";
+
+export type { AxisFrameStyle };
 import { colorsForCount, findPalette } from "./palettes";
 import { FIGURE_CAPTION_DEFAULT } from "./fakeText";
 
 /** figure-space pixels per millimetre (virtual coordinate system for layout). */
 export const FIG_PX_PER_MM = 4;
 
+// Nature submission guidelines: sans-serif (Arial/Helvetica), 5–7 pt type
+// (≥5 pt), line widths ≥0.25 pt (0.5–1 pt typical).
 const DEFAULT_TYPOGRAPHY: TypographySettings = {
   fontFamily: "Arial",
-  axisLabelPt: 8,
-  tickLabelPt: 7,
-  legendPt: 7,
-  titlePt: 9,
-  dataLineWidthPt: 1.2,
-  axisLineWidthPt: 0.8,
-  tickLineWidthPt: 0.8
+  axisLabelPt: 7,
+  tickLabelPt: 6,
+  legendPt: 6,
+  titlePt: 7,
+  dataLineWidthPt: 1.0,
+  axisLineWidthPt: 0.5,
+  tickLineWidthPt: 0.5
 };
 
 const DEFAULT_LABEL: PanelLabelStyle = {
   format: "(a)",
   position: "tl",
   fontFamily: "Arial",
-  fontSizePt: 9,
+  fontSizePt: 8, // Nature panel letters: ~8 pt bold
   bold: true,
   color: "#000000",
   whiteBacking: false
@@ -68,9 +81,12 @@ interface DocSnapshot {
   gutterMm: number;
   pageWidthMm: number;
   activePaletteId: string | null;
+  axisFrame: AxisFrameStyle;
+  bgTransparent: boolean;
 }
 
 export type RightTab = "palette" | "emphasis" | "type" | "tune" | "export";
+export type AlignKind = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
 
 interface AppState {
   // document
@@ -81,10 +97,13 @@ interface AppState {
   gutterMm: number;
   pageWidthMm: number;
   activePaletteId: string | null;
+  axisFrame: AxisFrameStyle;
+  bgTransparent: boolean;
   exportSettings: ExportSettings;
 
   // ui / selection (not in history)
   selectedPanelId: string | null;
+  selectedPanelIds: string[]; // multi-select for align/distribute
   selectedElementId: string | null;
   rightTab: RightTab;
   showGrid: boolean;
@@ -99,6 +118,10 @@ interface AppState {
   importSvg: (name: string, raw: string) => void;
   removePanel: (id: string) => void;
   selectPanel: (id: string | null) => void;
+  togglePanelSelected: (id: string) => void;
+  alignPanels: (kind: AlignKind) => void;
+  distributePanels: (axis: "h" | "v") => void;
+  applyElementStyleToRole: (panelId: string, scid: string) => void;
   selectElement: (id: string | null) => void;
   setRightTab: (t: RightTab) => void;
   toggleGrid: () => void;
@@ -108,6 +131,7 @@ interface AppState {
   updatePanelRect: (id: string, rect: { x: number; y: number; w: number; h: number }) => void;
   setPanelAspectLock: (id: string, locked: boolean) => void;
   reorderPanels: (orderedIds: string[]) => void;
+  reflowPanels: () => void;
 
   applyPalette: (paletteId: string) => void;
   recolorSeries: (panelId: string, seriesId: string, color: string) => void;
@@ -117,9 +141,13 @@ interface AppState {
   setTypography: (patch: Partial<TypographySettings>) => void;
   unifyTypography: () => void;
   tuneElement: (panelId: string, scid: string, prop: string, value: string) => void;
+  hideElement: (panelId: string, scid: string, hidden: boolean) => void;
+  deleteElement: (panelId: string, scid: string) => void;
 
   setLabelStyle: (patch: Partial<PanelLabelStyle>) => void;
   setGutterMm: (mm: number) => void;
+  setAxisFrame: (style: AxisFrameStyle) => void;
+  setBackgroundTransparent: (transparent: boolean) => void;
   setPageWidthMm: (mm: number) => void;
   setCaption: (text: string) => void;
   setExport: (patch: Partial<ExportSettings>) => void;
@@ -139,8 +167,40 @@ function captureDoc(s: AppState): DocSnapshot {
     typography: s.typography,
     gutterMm: s.gutterMm,
     pageWidthMm: s.pageWidthMm,
-    activePaletteId: s.activePaletteId
+    activePaletteId: s.activePaletteId,
+    axisFrame: s.axisFrame,
+    bgTransparent: s.bgTransparent
   });
+}
+
+/** Plot-area box (figure/viewBox coords) for redrawing the axis frame. */
+function plotBox(p: Panel): { x: number; y: number; w: number; h: number } {
+  const figArea = p.vb.w * p.vb.h;
+  const axisReal = p.elements.filter(
+    (e) => e.role === "axis" && (e.bbox.w > 0 || e.bbox.h > 0)
+  );
+  if (axisReal.length) {
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const e of axisReal) {
+      x0 = Math.min(x0, e.bbox.x);
+      y0 = Math.min(y0, e.bbox.y);
+      x1 = Math.max(x1, e.bbox.x + e.bbox.w);
+      y1 = Math.max(y1, e.bbox.y + e.bbox.h);
+    }
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+  const bgs = p.elements.filter((e) => {
+    const a = e.bbox.w * e.bbox.h;
+    return e.role === "background" && a < 0.9 * figArea && a > 0.05 * figArea;
+  });
+  if (bgs.length) {
+    const big = bgs.reduce((a, b) => (a.bbox.w * a.bbox.h > b.bbox.w * b.bbox.h ? a : b));
+    return { ...big.bbox };
+  }
+  return { x: p.vb.x + p.vb.w * 0.12, y: p.vb.y + p.vb.h * 0.08, w: p.vb.w * 0.78, h: p.vb.h * 0.82 };
 }
 
 /** Recompute (a)(b)(c) labels from panel order. */
@@ -170,10 +230,15 @@ export function formatLabel(index: number, format: PanelLabelStyle["format"]): s
 }
 
 /** Place a freshly imported panel in a simple 2-column flow. */
-function placeNewPanel(existing: Panel[], aspect: number, pageWidthMm: number): { x: number; y: number; w: number; h: number } {
+function placeNewPanel(
+  existing: Panel[],
+  aspect: number,
+  pageWidthMm: number,
+  gutterMm: number
+): { x: number; y: number; w: number; h: number } {
   const figW = pageWidthMm * FIG_PX_PER_MM;
   const cols = 2;
-  const gutter = 4 * FIG_PX_PER_MM;
+  const gutter = gutterMm * FIG_PX_PER_MM;
   const cellW = (figW - gutter * (cols - 1)) / cols;
   const w = cellW;
   const h = w / (aspect || 1.4);
@@ -186,6 +251,35 @@ function placeNewPanel(existing: Panel[], aspect: number, pageWidthMm: number): 
   return { x, y, w, h };
 }
 
+/**
+ * Re-flow every panel into the 2-column grid using the current page width and
+ * gutter, preserving panel order (and array order). Resets each panel's w/h to
+ * the standard cell — manual sizes/positions are intentionally overridden, as
+ * this is an explicit "tidy up" triggered by changing the gutter.
+ */
+function reflow(panels: Panel[], pageWidthMm: number, gutterMm: number): Panel[] {
+  const figW = pageWidthMm * FIG_PX_PER_MM;
+  const cols = 2;
+  const gutter = gutterMm * FIG_PX_PER_MM;
+  const cellW = (figW - gutter * (cols - 1)) / cols;
+  const byOrder = [...panels].sort((a, b) => a.order - b.order);
+  const rect = new Map<string, { x: number; y: number; w: number; h: number }>();
+  let rowTop = 0;
+  let rowMaxH = 0;
+  byOrder.forEach((p, i) => {
+    const col = i % cols;
+    if (col === 0 && i > 0) {
+      rowTop += rowMaxH + gutter;
+      rowMaxH = 0;
+    }
+    const w = cellW;
+    const h = w / (p.aspect || 1.4);
+    rowMaxH = Math.max(rowMaxH, h);
+    rect.set(p.id, { x: col * (cellW + gutter), y: rowTop, w, h });
+  });
+  return panels.map((p) => ({ ...p, ...rect.get(p.id)! }));
+}
+
 /** Merge freshly aggregated series with previous ones, preserving user edits. */
 function mergeSeries(oldSeries: DataSeries[], fresh: DataSeries[]): DataSeries[] {
   const byId = new Map(oldSeries.map((s) => [s.id, s]));
@@ -196,6 +290,37 @@ function mergeSeries(oldSeries: DataSeries[], fresh: DataSeries[]): DataSeries[]
   });
 }
 
+/**
+ * Re-derive elements/vb after a panel's SVG was structurally mutated (hide /
+ * delete). `parseSvgString` preserves existing data-scid / data-scrole, so ids
+ * and user role overrides survive. Series are intentionally kept as-is: hide /
+ * delete targets structural elements, and data series still address members by
+ * scid (a missing scid is simply skipped by later mutations).
+ */
+function reparsePanel(p: Panel, newSvg: string): Panel {
+  const r = parseSvgString(newSvg, p.name);
+  return { ...p, svg: r.svg, vb: r.vb, elements: r.elements };
+}
+
+/**
+ * Re-apply the global typography to a panel, compensated for the panel's
+ * current stretch so type/line widths render at a constant figure-space size
+ * across all panels. Operates on the panel's CURRENT svg (preserving manual
+ * color/dash/hide edits); writes are absolute, so repeated calls (each resize)
+ * don't accumulate. Emphasis is re-asserted last so emphasized widths win.
+ */
+function applyTypographyToPanel(p: Panel, typography: TypographySettings): Panel {
+  if (p.mode === "layout-only") return p;
+  const scale = panelScale(p.vb.w, p.vb.h, p.w, p.h);
+  let svg = unifyTypographySvg(p.svg, typography, scale);
+  for (const ser of p.series) {
+    if (ser.emphasis !== "normal") {
+      svg = applyEmphasis(svg, ser, ser.emphasis, typography.dataLineWidthPt, scale);
+    }
+  }
+  return { ...p, svg };
+}
+
 export const useStore = create<AppState>((set, get) => ({
   panels: [],
   caption: FIGURE_CAPTION_DEFAULT,
@@ -204,9 +329,12 @@ export const useStore = create<AppState>((set, get) => ({
   gutterMm: 4,
   pageWidthMm: 183,
   activePaletteId: null,
+  axisFrame: "original",
+  bgTransparent: false,
   exportSettings: DEFAULT_EXPORT,
 
   selectedPanelId: null,
+  selectedPanelIds: [],
   selectedElementId: null,
   rightTab: "palette",
   showGrid: true,
@@ -232,7 +360,7 @@ export const useStore = create<AppState>((set, get) => ({
     get().snapshot();
     set((s) => {
       const aspect = result!.vb.w / result!.vb.h || 1.4;
-      const rect = placeNewPanel(s.panels, aspect, s.pageWidthMm);
+      const rect = placeNewPanel(s.panels, aspect, s.pageWidthMm, s.gutterMm);
       const panel: Panel = {
         id: `p${Date.now().toString(36)}_${s.panels.length}`,
         name,
@@ -253,7 +381,13 @@ export const useStore = create<AppState>((set, get) => ({
         textToPath: result!.textToPath,
         order: s.panels.length
       };
-      const panels = relabel([...s.panels, panel], s.labelStyle);
+      let prepared = panel;
+      if (panel.mode !== "layout-only") {
+        if (s.axisFrame !== "original")
+          prepared = { ...prepared, svg: redrawAxisFrame(prepared.svg, plotBox(prepared), s.axisFrame) };
+        if (s.bgTransparent) prepared = { ...prepared, svg: setBgHiddenSvg(prepared.svg, true) };
+      }
+      const panels = relabel([...s.panels, prepared], s.labelStyle);
       const msgs = result!.warnings.map((w) => ({
         id: `m${messageCounter++}`,
         text: `${name}: ${w.message}`,
@@ -279,7 +413,89 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  selectPanel: (id) => set({ selectedPanelId: id, selectedElementId: null }),
+  selectPanel: (id) =>
+    set({ selectedPanelId: id, selectedElementId: null, selectedPanelIds: id ? [id] : [] }),
+  togglePanelSelected: (id) =>
+    set((s) => {
+      const has = s.selectedPanelIds.includes(id);
+      const ids = has ? s.selectedPanelIds.filter((x) => x !== id) : [...s.selectedPanelIds, id];
+      return { selectedPanelIds: ids, selectedPanelId: id, selectedElementId: null };
+    }),
+  alignPanels: (kind) => {
+    const ids = get().selectedPanelIds;
+    if (ids.length < 2) return;
+    get().snapshot();
+    set((s) => {
+      const sel = s.panels.filter((p) => ids.includes(p.id));
+      const minX = Math.min(...sel.map((p) => p.x));
+      const maxR = Math.max(...sel.map((p) => p.x + p.w));
+      const minY = Math.min(...sel.map((p) => p.y));
+      const maxB = Math.max(...sel.map((p) => p.y + p.h));
+      const cx = (minX + maxR) / 2;
+      const cy = (minY + maxB) / 2;
+      const place = (p: Panel): Partial<Panel> => {
+        switch (kind) {
+          case "left":
+            return { x: minX };
+          case "right":
+            return { x: maxR - p.w };
+          case "hcenter":
+            return { x: cx - p.w / 2 };
+          case "top":
+            return { y: minY };
+          case "bottom":
+            return { y: maxB - p.h };
+          case "vcenter":
+            return { y: cy - p.h / 2 };
+        }
+      };
+      return { panels: s.panels.map((p) => (ids.includes(p.id) ? { ...p, ...place(p) } : p)) };
+    });
+  },
+  distributePanels: (axis) => {
+    const ids = get().selectedPanelIds;
+    if (ids.length < 3) return;
+    get().snapshot();
+    set((s) => {
+      const sel = s.panels.filter((p) => ids.includes(p.id));
+      const horiz = axis === "h";
+      const center = (p: Panel) => (horiz ? p.x + p.w / 2 : p.y + p.h / 2);
+      sel.sort((a, b) => center(a) - center(b));
+      const c0 = center(sel[0]);
+      const cN = center(sel[sel.length - 1]);
+      const step = (cN - c0) / (sel.length - 1);
+      const pos = new Map<string, number>();
+      sel.forEach((p, i) => pos.set(p.id, c0 + step * i - (horiz ? p.w : p.h) / 2));
+      return {
+        panels: s.panels.map((p) =>
+          pos.has(p.id) ? { ...p, ...(horiz ? { x: pos.get(p.id)! } : { y: pos.get(p.id)! }) } : p
+        )
+      };
+    });
+  },
+  applyElementStyleToRole: (panelId, scid) => {
+    get().snapshot();
+    set((s) => {
+      const src = s.panels.find((p) => p.id === panelId);
+      const el = src?.elements.find((e) => e.scid === scid);
+      if (!src || !el) return {};
+      const role = el.role;
+      // read color live from the svg (tuneElement edits the svg, not the model)
+      const { stroke, fill } = readElementColorSvg(src.svg, scid);
+      const dash = el.strokeDasharray;
+      const panels = s.panels.map((p) => {
+        let svg = p.svg;
+        for (const e of p.elements) {
+          if (e.role !== role) continue;
+          if (stroke && stroke !== "none") svg = setElementStyle(svg, e.scid, "stroke", stroke);
+          if (fill && fill !== "none") svg = setElementStyle(svg, e.scid, "fill", fill);
+          if (dash != null) svg = setElementStyle(svg, e.scid, "stroke-dasharray", dash);
+        }
+        return svg === p.svg ? p : reparsePanel(p, svg);
+      });
+      return { panels };
+    });
+  },
   selectElement: (id) => set({ selectedElementId: id }),
   setRightTab: (t) => set({ rightTab: t }),
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
@@ -290,6 +506,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   updatePanelRect: (id, rect) =>
     set((s) => ({
+      // Scaling is equal-ratio (whole sub-figure scales together); type/line are
+      // unified on demand via the "unify" action, not auto-compensated here.
       panels: s.panels.map((p) => (p.id === id ? { ...p, ...rect } : p))
     })),
 
@@ -310,6 +528,11 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
+  reflowPanels: () => {
+    get().snapshot();
+    set((s) => ({ panels: reflow(s.panels, s.pageWidthMm, s.gutterMm) }));
+  },
+
   applyPalette: (paletteId) => {
     const palette = findPalette(paletteId);
     if (!palette) return;
@@ -322,7 +545,20 @@ export const useStore = create<AppState>((set, get) => ({
         let svg = p.svg;
         const series = p.series.map((ser) => {
           const idx = dataSeries.findIndex((d) => d.id === ser.id);
-          const color = colors[idx] ?? ser.color;
+          // gradient palette + a fill series -> light->dark gradient fill
+          if (palette.gradients && ser.isFill) {
+            const grad = palette.gradients[idx % palette.gradients.length];
+            const gradId = `scgrad_${ser.id}`;
+            svg = applyGradientFillSvg(svg, ser.elementIds, grad, gradId);
+            return { ...ser, color: grad.to, gradientId: gradId };
+          }
+          const color =
+            (palette.gradients ? palette.gradients[idx % palette.gradients.length].to : colors[idx]) ?? ser.color;
+          if (ser.isFill) {
+            // solid fill (also clears any prior gradient url)
+            svg = setSolidFillSvg(svg, ser.elementIds, color);
+            return { ...ser, color, gradientId: null };
+          }
           svg = recolorSeriesSvg(svg, ser, color);
           return { ...ser, color };
         });
@@ -381,28 +617,34 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setTypography: (patch) => {
+    // store-only; sub-figures are normalized when the user hits "unify"
     set((s) => ({ typography: { ...s.typography, ...patch } }));
   },
 
   unifyTypography: () => {
     get().snapshot();
-    set((s) => ({
-      panels: s.panels.map((p) => {
-        if (p.mode === "layout-only") return p;
-        let svg = unifyTypographySvg(p.svg, s.typography);
-        // re-apply emphasis so emphasized widths win over the unified data width
-        for (const ser of p.series) {
-          if (ser.emphasis !== "normal") svg = applyEmphasis(svg, ser, ser.emphasis, s.typography.dataLineWidthPt);
-        }
-        return { ...p, svg };
-      })
-    }));
+    set((s) => ({ panels: s.panels.map((p) => applyTypographyToPanel(p, s.typography)) }));
   },
 
   tuneElement: (panelId, scid, prop, value) => {
     get().snapshot();
     set((s) => ({
       panels: s.panels.map((p) => (p.id === panelId ? { ...p, svg: setElementStyle(p.svg, scid, prop, value) } : p))
+    }));
+  },
+
+  hideElement: (panelId, scid, hidden) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) => (p.id === panelId ? reparsePanel(p, setHiddenSvg(p.svg, scid, hidden)) : p))
+    }));
+  },
+
+  deleteElement: (panelId, scid) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) => (p.id === panelId ? reparsePanel(p, deleteElementSvg(p.svg, scid)) : p)),
+      selectedElementId: s.selectedElementId === scid ? null : s.selectedElementId
     }));
   },
 
@@ -415,8 +657,29 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setGutterMm: (mm) => {
+    const g = Math.max(0, mm);
     get().snapshot();
-    set({ gutterMm: Math.max(0, mm) });
+    set((s) => ({ gutterMm: g, panels: reflow(s.panels, s.pageWidthMm, g) }));
+  },
+
+  setAxisFrame: (style) => {
+    get().snapshot();
+    set((s) => ({
+      axisFrame: style,
+      panels: s.panels.map((p) =>
+        p.mode === "layout-only" ? p : { ...p, svg: redrawAxisFrame(p.svg, plotBox(p), style) }
+      )
+    }));
+  },
+
+  setBackgroundTransparent: (transparent) => {
+    get().snapshot();
+    set((s) => ({
+      bgTransparent: transparent,
+      panels: s.panels.map((p) =>
+        p.mode === "layout-only" ? p : { ...p, svg: setBgHiddenSvg(p.svg, transparent) }
+      )
+    }));
   },
 
   setPageWidthMm: (mm) => {

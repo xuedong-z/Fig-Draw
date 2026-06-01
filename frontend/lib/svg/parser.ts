@@ -260,7 +260,8 @@ export function parseSvgString(raw: string, sourceName = "figure"): ParseResult 
         isGray: ["black", "white", "gray"].includes(classifyColor(stroke) ?? classifyColor(fill) ?? ""),
         hasMarker: isMarkerLike(node),
         text: tag === "text" ? node.textContent : null,
-        fontSizePx: fontSize
+        fontSizePx: fontSize,
+        hidden: getStyleValue(node, "display") === "none"
       };
       el.groupKey = groupKeyOf(node, el);
       elements.push(el);

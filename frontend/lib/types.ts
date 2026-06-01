@@ -85,6 +85,7 @@ export interface ParsedElement {
   hasMarker: boolean; // marker-ish (circle/use/small repeated shapes)
   text: string | null; // text content for <text>
   fontSizePx: number | null;
+  hidden: boolean; // display:none (user-hidden via Tune)
 }
 
 /**

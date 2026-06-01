@@ -8,9 +8,24 @@
  */
 import type { DataSeries, Emphasis, TypographySettings } from "../types";
 import { classifyColor, recolorToHue } from "./colorUtils";
-import { getStyleValue, setStyleValue } from "./styleAccessor";
+import { getStyleValue, setStyleValue, removeStyleValue } from "./styleAccessor";
 
 const AUX_GRAY = "#9aa0a6";
+
+/** points -> figure-space px (FIG_PX_PER_MM = 4, so 1pt = 4*25.4/72 px). */
+const PT_TO_FIG = (4 * 25.4) / 72; // ≈ 1.41111
+
+/**
+ * Combined stretch factor of a panel (its viewBox is rendered into a w×h box
+ * with preserveAspectRatio="none"). Typography & line widths are divided by
+ * this before being written, so after the stretch they render at a constant
+ * figure-space size — identical across panels regardless of panel size.
+ * sqrt(sx*sy) keeps the perceived size stable under non-uniform resize.
+ */
+export function panelScale(vbW: number, vbH: number, w: number, h: number): number {
+  const s = Math.sqrt((w / (vbW || 1)) * (h / (vbH || 1)));
+  return Math.max(s, 0.05);
+}
 
 function openDoc(svg: string): { root: SVGSVGElement; serialize: () => string } {
   const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
@@ -81,9 +96,10 @@ export function applyEmphasisToDoc(
   root: Element,
   series: DataSeries,
   emphasis: Emphasis,
-  baseWidthPt: number
+  baseWidthPt: number,
+  scale = 1
 ): void {
-  const cfg = emphasisConfig(emphasis, baseWidthPt);
+  const cfg = emphasisConfig(emphasis, baseWidthPt, scale);
   for (const id of series.elementIds) {
     const el = byScid(root, id);
     if (!el) continue;
@@ -113,22 +129,29 @@ export function applyEmphasisToDoc(
   }
 }
 
-export function applyEmphasis(svg: string, series: DataSeries, emphasis: Emphasis, baseWidthPt: number): string {
+export function applyEmphasis(
+  svg: string,
+  series: DataSeries,
+  emphasis: Emphasis,
+  baseWidthPt: number,
+  scale = 1
+): string {
   const { root, serialize } = openDoc(svg);
-  applyEmphasisToDoc(root, series, emphasis, baseWidthPt);
+  applyEmphasisToDoc(root, series, emphasis, baseWidthPt, scale);
   return serialize();
 }
 
-function emphasisConfig(e: Emphasis, base: number) {
+function emphasisConfig(e: Emphasis, base: number, scale = 1) {
+  const k = PT_TO_FIG / scale; // pt -> compensated figure-px
   switch (e) {
     case "primary":
-      return { opacity: 1, width: round(base * 1.3), dash: "" };
+      return { opacity: 1, width: round(base * 1.3 * k), dash: "" };
     case "secondary":
-      return { opacity: 0.6, width: round(base * 0.75), dash: "" };
+      return { opacity: 0.6, width: round(base * 0.75 * k), dash: "" };
     case "auxiliary":
-      return { opacity: 0.5, width: round(base * 0.6), dash: "3,3" };
+      return { opacity: 0.5, width: round(base * 0.6 * k), dash: "3,3" };
     default:
-      return { opacity: 1, width: round(base), dash: "" };
+      return { opacity: 1, width: round(base * k), dash: "" };
   }
 }
 
@@ -149,21 +172,22 @@ const WIDTH_BY_ROLE = (t: TypographySettings) => ({
  * Module G — unify font/size/line-width by role. `elements` carries the role
  * map; we read data-scrole from the live nodes as the authority.
  */
-export function unifyTypography(svg: string, typography: TypographySettings): string {
+export function unifyTypography(svg: string, typography: TypographySettings, scale = 1): string {
   const { root, serialize } = openDoc(svg);
   const fontByRole = FONT_BY_ROLE(typography);
   const widthByRole = WIDTH_BY_ROLE(typography);
+  const k = PT_TO_FIG / scale; // pt -> figure-px, compensated for the panel stretch
 
   root.querySelectorAll("[data-scrole]").forEach((el) => {
     const role = el.getAttribute("data-scrole") || "";
     if (el.tagName.toLowerCase() === "text") {
       setStyleValue(el, "font-family", typography.fontFamily);
       const size = (fontByRole as Record<string, number>)[role];
-      if (size) setStyleValue(el, "font-size", `${size}px`);
+      if (size) setStyleValue(el, "font-size", `${round(size * k)}px`);
     }
     const w = (widthByRole as Record<string, number>)[role];
     if (w != null && getStyleValue(el, "stroke")) {
-      setStyleValue(el, "stroke-width", String(w));
+      setStyleValue(el, "stroke-width", String(round(w * k)));
     }
   });
   return serialize();
@@ -174,6 +198,126 @@ export function setElementStyle(svg: string, scid: string, prop: string, value: 
   const { root, serialize } = openDoc(svg);
   const el = byScid(root, scid);
   if (el) setStyleValue(el, prop, value);
+  return serialize();
+}
+
+/** Hide / show one element via display:none (kept in the model, recoverable). */
+export function setElementHidden(svg: string, scid: string, hidden: boolean): string {
+  const { root, serialize } = openDoc(svg);
+  const el = byScid(root, scid);
+  if (el) {
+    if (hidden) setStyleValue(el, "display", "none");
+    else removeStyleValue(el, "display");
+  }
+  return serialize();
+}
+
+/** Permanently remove one element from the panel. */
+export function deleteElement(svg: string, scid: string): string {
+  const { root, serialize } = openDoc(svg);
+  byScid(root, scid)?.remove();
+  return serialize();
+}
+
+export type AxisFrameStyle = "original" | "full" | "half" | "none";
+
+/**
+ * Redraw the axis frame: hide the original axis/spine elements and draw a clean
+ * full box / half L (left+bottom) / nothing at the given plot-area box. "original"
+ * restores the imported frame. The drawn path carries data-scrole="axis" so the
+ * unify step picks up its line width.
+ */
+export function redrawAxisFrame(
+  svg: string,
+  box: { x: number; y: number; w: number; h: number },
+  style: AxisFrameStyle
+): string {
+  const { root, serialize } = openDoc(svg);
+  root.querySelectorAll("[data-scframe]").forEach((el) => el.remove());
+  const original = Array.from(root.querySelectorAll('[data-scrole="axis"]'));
+  if (style === "original") {
+    original.forEach((el) => removeStyleValue(el, "display"));
+    return serialize();
+  }
+  original.forEach((el) => setStyleValue(el, "display", "none"));
+  if (style === "none") return serialize();
+
+  const { x, y, w, h } = box;
+  const d =
+    style === "full"
+      ? `M${x} ${y} L${x + w} ${y} L${x + w} ${y + h} L${x} ${y + h} Z`
+      : `M${x} ${y} L${x} ${y + h} L${x + w} ${y + h}`;
+  const path = root.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", d);
+  path.setAttribute("data-scframe", "1");
+  path.setAttribute("data-scrole", "axis");
+  path.setAttribute("style", "fill:none;stroke:#000000;stroke-width:1;stroke-linejoin:miter");
+  root.appendChild(path);
+  return serialize();
+}
+
+/** Hide / show every background-role fill (page + plot area) so the figure
+ * background becomes transparent. */
+export function setBackgroundHidden(svg: string, hidden: boolean): string {
+  const { root, serialize } = openDoc(svg);
+  root.querySelectorAll('[data-scrole="background"]').forEach((el) => {
+    if (hidden) setStyleValue(el, "display", "none");
+    else removeStyleValue(el, "display");
+  });
+  return serialize();
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** Apply a vertical light→dark gradient fill to a fill-series' elements,
+ * creating a reusable <linearGradient> referenced via fill=url(#id). */
+export function applyGradientFill(
+  svg: string,
+  elementIds: string[],
+  grad: { from: string; to: string },
+  gradId: string
+): string {
+  const { root, serialize } = openDoc(svg);
+  const doc = root.ownerDocument;
+  let defs = root.querySelector("defs");
+  if (!defs) {
+    defs = doc.createElementNS(SVG_NS, "defs");
+    root.insertBefore(defs, root.firstChild);
+  }
+  defs.querySelector(`#${CSS.escape(gradId)}`)?.remove();
+  const lg = doc.createElementNS(SVG_NS, "linearGradient");
+  lg.setAttribute("id", gradId);
+  lg.setAttribute("x1", "0");
+  lg.setAttribute("y1", "1");
+  lg.setAttribute("x2", "0");
+  lg.setAttribute("y2", "0");
+  for (const [offset, color] of [["0", grad.from], ["1", grad.to]] as const) {
+    const stop = doc.createElementNS(SVG_NS, "stop");
+    stop.setAttribute("offset", offset);
+    stop.setAttribute("stop-color", color);
+    lg.appendChild(stop);
+  }
+  defs.appendChild(lg);
+  for (const id of elementIds) {
+    const el = byScid(root, id);
+    if (!el) continue;
+    const f = getStyleValue(el, "fill");
+    if (f && f !== "none") setStyleValue(el, "fill", `url(#${gradId})`);
+  }
+  return serialize();
+}
+
+/** Set a flat solid color on a fill-series (fill + data stroke), clearing any
+ * gradient url. Used when switching a fill series off a gradient palette. */
+export function setSolidFill(svg: string, elementIds: string[], color: string): string {
+  const { root, serialize } = openDoc(svg);
+  for (const id of elementIds) {
+    const el = byScid(root, id);
+    if (!el) continue;
+    const f = getStyleValue(el, "fill");
+    if (f && f !== "none") setStyleValue(el, "fill", color);
+    if (classifyColor(getStyleValue(el, "stroke")) === "data") setStyleValue(el, "stroke", color);
+  }
   return serialize();
 }
 

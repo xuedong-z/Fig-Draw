@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Canvas, Rect, Line } from "fabric";
 import { useStore, FIG_PX_PER_MM } from "@/lib/store";
 import type { Panel, PanelLabelStyle } from "@/lib/types";
+import { EXAMPLES, loadExample } from "@/lib/examples";
 
 const SNAP = 6; // px snap threshold
 const FAINT = "#c7ced8";
@@ -63,6 +64,8 @@ export function FigureCanvas() {
   const panels = useStore((s) => s.panels);
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const selectedPanelId = useStore((s) => s.selectedPanelId);
+  const selectedPanelIds = useStore((s) => s.selectedPanelIds);
+  const selectedElementId = useStore((s) => s.selectedElementId);
   const showGrid = useStore((s) => s.showGrid);
   const labelStyle = useStore((s) => s.labelStyle);
 
@@ -78,6 +81,10 @@ export function FigureCanvas() {
   const guideVRef = useRef<Line | null>(null);
   const guideHRef = useRef<Line | null>(null);
   const overlayRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const overlayHostRef = useRef<HTMLDivElement>(null);
+  // true while we programmatically sync fabric's active object from the store,
+  // so the resulting selection events don't bounce back and reset selection.
+  const suppressSelectRef = useRef(false);
 
   // ── init fabric (once) ───────────────────────────────────────────────────
   // The <canvas> is created imperatively (NOT via JSX): fabric wraps it in its
@@ -181,8 +188,37 @@ export function FigureCanvas() {
     c.on("mouse:down", (opt) => {
       dragSnapped = false;
       const t = (opt.target as RectWithId) || null;
+      const st = useStore.getState();
       if (!t) {
-        if (useStore.getState().selectedPanelId !== null) useStore.getState().selectPanel(null);
+        if (st.selectedPanelId !== null) st.selectPanel(null);
+        return;
+      }
+      // Shift-click is multi-select for align/distribute (handled by the
+      // selection handler); skip element-picking in that case.
+      if ((opt.e as MouseEvent).shiftKey) return;
+      // A click on the already-selected panel picks the element under the cursor.
+      // The overlays are pointer-events:none and fabric's canvas sits on top, so
+      // we momentarily flip both to let elementFromPoint reach the real SVG node.
+      if (t.scId && t.scId === st.selectedPanelId) {
+        const ev = opt.e as MouseEvent;
+        const overlay = overlayHostRef.current;
+        const fabHost = hostRef.current; // disable the WHOLE fabric layer (lower + upper canvas)
+        if (overlay && fabHost && typeof ev.clientX === "number") {
+          const prevFab = fabHost.style.pointerEvents;
+          const prevOverlay = overlay.style.pointerEvents;
+          fabHost.style.pointerEvents = "none";
+          overlay.style.pointerEvents = "auto";
+          const node = document.elementFromPoint(ev.clientX, ev.clientY);
+          fabHost.style.pointerEvents = prevFab;
+          overlay.style.pointerEvents = prevOverlay;
+          const scid = node?.closest("[data-scid]")?.getAttribute("data-scid") ?? null;
+          if (scid) {
+            st.selectElement(scid);
+            st.setRightTab("tune");
+          } else if (st.selectedElementId !== null) {
+            st.selectElement(null);
+          }
+        }
       }
     });
 
@@ -204,12 +240,10 @@ export function FigureCanvas() {
         useStore.getState().snapshot();
         dragSnapped = true;
       }
-      let w = (o.width ?? 0) * (o.scaleX ?? 1);
-      let h = (o.height ?? 0) * (o.scaleY ?? 1);
-      const panel = useStore.getState().panels.find((p) => p.id === o.scId);
-      if (panel && panel.aspectLocked) h = w / (panel.aspect || 1.4);
-      w = Math.max(24, w);
-      h = Math.max(18, h);
+      // Free-shape: width and height resize independently (corners or side
+      // handles), so a sub-figure can be reshaped, not just scaled.
+      const w = Math.max(24, (o.width ?? 0) * (o.scaleX ?? 1));
+      const h = Math.max(18, (o.height ?? 0) * (o.scaleY ?? 1));
       o.set({ width: w, height: h, scaleX: 1, scaleY: 1 });
       o.setCoords();
       syncOverlay(o);
@@ -232,14 +266,22 @@ export function FigureCanvas() {
       c.requestRenderAll();
     });
 
-    const onSelect = () => {
+    const onSelect = (opt: { e?: Event }) => {
+      if (suppressSelectRef.current) return; // store->fabric sync, not a user click
+      const ev = opt?.e as MouseEvent | undefined;
       const a = c.getActiveObject() as RectWithId | undefined;
       const id = a?.scId ?? null;
-      if (useStore.getState().selectedPanelId !== id) useStore.getState().selectPanel(id);
+      const st = useStore.getState();
+      if (ev?.shiftKey && id) {
+        st.togglePanelSelected(id);
+      } else if (st.selectedPanelId !== id) {
+        st.selectPanel(id);
+      }
     };
     c.on("selection:created", onSelect);
     c.on("selection:updated", onSelect);
     c.on("selection:cleared", () => {
+      if (suppressSelectRef.current) return; // ignore programmatic clears
       if (useStore.getState().selectedPanelId !== null) useStore.getState().selectPanel(null);
     });
 
@@ -296,7 +338,7 @@ export function FigureCanvas() {
           padding: 0
         }) as RectWithId;
         r.scId = p.id;
-        r.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false, mtr: false });
+        r.setControlsVisibility({ mtr: false }); // hide rotation; keep side + corner handles
         c.add(r);
       } else if (c.getActiveObject() !== r) {
         r.set({ left: p.x, top: p.y, width: p.w, height: p.h, scaleX: 1, scaleY: 1 });
@@ -311,6 +353,7 @@ export function FigureCanvas() {
     const c = fabricRef.current;
     if (!c) return;
     const active = c.getActiveObject() as RectWithId | undefined;
+    suppressSelectRef.current = true;
     if (selectedPanelId) {
       if (!active || active.scId !== selectedPanelId) {
         const obj = c.getObjects().find((o) => (o as RectWithId).scId === selectedPanelId) as
@@ -325,6 +368,7 @@ export function FigureCanvas() {
       c.discardActiveObject();
       c.requestRenderAll();
     }
+    suppressSelectRef.current = false;
   }, [selectedPanelId, panels]);
 
   const setOverlayRef = (id: string) => (el: HTMLDivElement | null) => {
@@ -355,7 +399,19 @@ export function FigureCanvas() {
           <div className="text-center">
             <div className="text-sm font-medium text-neutral-400">Import an SVG to begin</div>
             <div className="mt-1 text-2xs text-neutral-300">
-              Drag exported sub-figures here · arrange them into one Figure
+              Import your exported sub-figures, or try an example:
+            </div>
+            <div className="pointer-events-auto mt-2 flex flex-wrap justify-center gap-1.5">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex.file}
+                  onClick={() => loadExample(ex, useStore.getState().importSvg)}
+                  title={ex.desc}
+                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-2xs text-neutral-500 hover:border-accent hover:text-accent"
+                >
+                  {ex.name}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -363,18 +419,45 @@ export function FigureCanvas() {
 
       {/* native SVG overlays (visual truth, non-interactive) — a self-contained
           React subtree that fabric never touches */}
-      <div className="pointer-events-none absolute inset-0 z-10">
-        {panels.map((p) => (
+      <div ref={overlayHostRef} className="pointer-events-none absolute inset-0 z-10">
+        {panels.map((p) => {
+          const multiSel = selectedPanelIds.length > 1 && selectedPanelIds.includes(p.id);
+          const selEl =
+            p.id === selectedPanelId && selectedElementId
+              ? p.elements.find((e) => e.scid === selectedElementId)
+              : null;
+          return (
           <div
             key={p.id}
             ref={setOverlayRef(p.id)}
             className="absolute overflow-hidden"
-            style={{ left: p.x, top: p.y, width: p.w, height: p.h }}
+            style={{
+              left: p.x,
+              top: p.y,
+              width: p.w,
+              height: p.h,
+              outline: multiSel ? "2px solid #4c8dff" : undefined,
+              outlineOffset: "1px"
+            }}
           >
             <div
               className="h-full w-full [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
               dangerouslySetInnerHTML={{ __html: p.svg }}
             />
+            {selEl && (
+              <div
+                className="pointer-events-none absolute"
+                style={{
+                  left: `${((selEl.bbox.x - p.vb.x) / p.vb.w) * 100}%`,
+                  top: `${((selEl.bbox.y - p.vb.y) / p.vb.h) * 100}%`,
+                  width: `${(selEl.bbox.w / p.vb.w) * 100}%`,
+                  height: `${(selEl.bbox.h / p.vb.h) * 100}%`,
+                  outline: "1.5px solid #4c8dff",
+                  outlineOffset: "1px",
+                  background: "rgba(76,141,255,0.1)"
+                }}
+              />
+            )}
             {p.label && labelStyle.format !== "none" && (
               <span
                 className={`absolute font-semibold leading-none ${labelPosClass(labelStyle.position)}`}
@@ -391,7 +474,8 @@ export function FigureCanvas() {
               </span>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* fabric interaction layer mounts its own <canvas> inside this host */}

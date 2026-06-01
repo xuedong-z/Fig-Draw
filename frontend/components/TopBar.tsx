@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { Upload, Undo2, Redo2, Download, FlaskConical } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { ExampleMenu } from "./ExampleMenu";
 
 export function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -44,6 +45,7 @@ export function TopBar() {
         className="hidden"
         onChange={(e) => onFiles(e.target.files)}
       />
+      <ExampleMenu />
 
       <div className="h-5 w-px bg-line" />
 
