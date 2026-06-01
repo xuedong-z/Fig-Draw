@@ -14,15 +14,24 @@ import type {
   Emphasis,
   ExportSettings,
   Panel,
+  ParsedElement,
   PanelLabelStyle,
   TypographySettings
 } from "./types";
 import { parseSvgString, aggregateSeries } from "./svg/parser";
 import {
+  bakeToCanvas as bakeToCanvasSvg,
+  rebuildFigsize as rebuildFigsizeSvg,
+  insetPlot as insetPlotSvg
+} from "./svg/figsizeRebuild";
+import {
   applyEmphasis,
   recolorSeries as recolorSeriesSvg,
+  recolorLegendSwatches as recolorLegendSwatchesSvg,
   setElementRole as setRoleSvg,
   setElementStyle,
+  setElementText as setElementTextSvg,
+  setElementAttr as setElementAttrSvg,
   setElementHidden as setHiddenSvg,
   deleteElement as deleteElementSvg,
   unifyTypography as unifyTypographySvg,
@@ -32,10 +41,17 @@ import {
   setBackgroundHidden as setBgHiddenSvg,
   applyGradientFill as applyGradientFillSvg,
   setSolidFill as setSolidFillSvg,
-  type AxisFrameStyle
+  reshapeMarkers as reshapeMarkersSvg,
+  setTickDirection as setTickDirSvg,
+  moveAxisLabel as moveAxisLabelSvg,
+  setTickVisibility as setTickVisSvg,
+  setAxisLabelGap as setAxisLabelGapSvg,
+  type AxisFrameStyle,
+  type TickDirection,
+  type MarkerShape
 } from "./svg/mutate";
 
-export type { AxisFrameStyle };
+export type { AxisFrameStyle, TickDirection };
 import { colorsForCount, findPalette } from "./palettes";
 import { FIGURE_CAPTION_DEFAULT } from "./fakeText";
 
@@ -62,7 +78,8 @@ const DEFAULT_LABEL: PanelLabelStyle = {
   fontSizePt: 8, // Nature panel letters: ~8 pt bold
   bold: true,
   color: "#000000",
-  whiteBacking: false
+  whiteBacking: false,
+  offsetPx: 4
 };
 
 const DEFAULT_EXPORT: ExportSettings = {
@@ -83,9 +100,16 @@ interface DocSnapshot {
   activePaletteId: string | null;
   axisFrame: AxisFrameStyle;
   bgTransparent: boolean;
+  tickVisX: boolean;
+  tickVisY: boolean;
+  axisLabelGap: number;
+  innerPad: number;
+  layoutLocked: boolean;
+  gridCols: number;
+  gridGap: number;
 }
 
-export type RightTab = "palette" | "emphasis" | "type" | "tune" | "export";
+export type RightTab = "palette" | "axis" | "emphasis" | "type" | "tune" | "export";
 export type AlignKind = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
 
 interface AppState {
@@ -99,6 +123,13 @@ interface AppState {
   activePaletteId: string | null;
   axisFrame: AxisFrameStyle;
   bgTransparent: boolean;
+  tickVisX: boolean;
+  tickVisY: boolean;
+  axisLabelGap: number;
+  innerPad: number;
+  layoutLocked: boolean;
+  gridCols: number;
+  gridGap: number;
   exportSettings: ExportSettings;
 
   // ui / selection (not in history)
@@ -148,6 +179,24 @@ interface AppState {
   setGutterMm: (mm: number) => void;
   setAxisFrame: (style: AxisFrameStyle) => void;
   setBackgroundTransparent: (transparent: boolean) => void;
+  autoCropPanel: (id: string) => void;
+  setTickDirection: (direction: TickDirection) => void;
+  setTickVisible: (axis: "x" | "y", visible: boolean) => void;
+  setAxisLabelGap: (gap: number) => void;
+  setInnerPad: (pad: number) => void;
+  applyGrid: (cols: number) => void;
+  setLayoutLocked: (locked: boolean) => void;
+  setGridGap: (px: number) => void;
+  cropSelected: () => void;
+  cropAll: () => void;
+  matchSizeSelected: () => void;
+  setPanelTickDirection: (panelId: string, direction: TickDirection) => void;
+  setElementText: (panelId: string, scid: string, text: string) => void;
+  setElementMarkerSize: (panelId: string, scid: string, r: number) => void;
+  setMarkerShape: (panelId: string, scid: string, shape: MarkerShape) => void;
+  setMarkerSize: (panelId: string, scid: string, r: number) => void;
+  setElementGradient: (panelId: string, scid: string, from: string, to: string) => void;
+  moveAxisLabel: (panelId: string, scid: string, opts: { center?: boolean; nudge?: number }) => void;
   setPageWidthMm: (mm: number) => void;
   setCaption: (text: string) => void;
   setExport: (patch: Partial<ExportSettings>) => void;
@@ -169,16 +218,24 @@ function captureDoc(s: AppState): DocSnapshot {
     pageWidthMm: s.pageWidthMm,
     activePaletteId: s.activePaletteId,
     axisFrame: s.axisFrame,
-    bgTransparent: s.bgTransparent
+    bgTransparent: s.bgTransparent,
+    tickVisX: s.tickVisX,
+    tickVisY: s.tickVisY,
+    axisLabelGap: s.axisLabelGap,
+    innerPad: s.innerPad,
+    layoutLocked: s.layoutLocked,
+    gridCols: s.gridCols,
+    gridGap: s.gridGap
   });
 }
 
 /** Plot-area box (figure/viewBox coords) for redrawing the axis frame. */
-function plotBox(p: Panel): { x: number; y: number; w: number; h: number } {
-  const figArea = p.vb.w * p.vb.h;
-  const axisReal = p.elements.filter(
-    (e) => e.role === "axis" && (e.bbox.w > 0 || e.bbox.h > 0)
-  );
+function plotBox(
+  els: ParsedElement[],
+  vb: { x: number; y: number; w: number; h: number }
+): { x: number; y: number; w: number; h: number } {
+  const figArea = vb.w * vb.h;
+  const axisReal = els.filter((e) => e.role === "axis" && (e.bbox.w > 0 || e.bbox.h > 0));
   if (axisReal.length) {
     let x0 = Infinity;
     let y0 = Infinity;
@@ -192,7 +249,7 @@ function plotBox(p: Panel): { x: number; y: number; w: number; h: number } {
     }
     return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   }
-  const bgs = p.elements.filter((e) => {
+  const bgs = els.filter((e) => {
     const a = e.bbox.w * e.bbox.h;
     return e.role === "background" && a < 0.9 * figArea && a > 0.05 * figArea;
   });
@@ -200,7 +257,7 @@ function plotBox(p: Panel): { x: number; y: number; w: number; h: number } {
     const big = bgs.reduce((a, b) => (a.bbox.w * a.bbox.h > b.bbox.w * b.bbox.h ? a : b));
     return { ...big.bbox };
   }
-  return { x: p.vb.x + p.vb.w * 0.12, y: p.vb.y + p.vb.h * 0.08, w: p.vb.w * 0.78, h: p.vb.h * 0.82 };
+  return { x: vb.x + vb.w * 0.12, y: vb.y + vb.h * 0.08, w: vb.w * 0.78, h: vb.h * 0.82 };
 }
 
 /** Recompute (a)(b)(c) labels from panel order. */
@@ -277,7 +334,14 @@ function reflow(panels: Panel[], pageWidthMm: number, gutterMm: number): Panel[]
     rowMaxH = Math.max(rowMaxH, h);
     rect.set(p.id, { x: col * (cellW + gutter), y: rowTop, w, h });
   });
-  return panels.map((p) => ({ ...p, ...rect.get(p.id)! }));
+  return panels.map((p) => {
+    const r = rect.get(p.id)!;
+    if (p.mode === "layout-only" || (r.w === p.w && r.h === p.h)) return { ...p, ...r };
+    const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, r.w, r.h);
+    // keep the geometric newPlot (exact + reversible) rather than re-detecting the
+    // plot from getBBox each resize — the latter jitters and accumulates drift.
+    return { ...reparsePanel({ ...p, ...r }, out.svg), plot: out.plot };
+  });
 }
 
 /** Merge freshly aggregated series with previous ones, preserving user edits. */
@@ -299,7 +363,31 @@ function mergeSeries(oldSeries: DataSeries[], fresh: DataSeries[]): DataSeries[]
  */
 function reparsePanel(p: Panel, newSvg: string): Panel {
   const r = parseSvgString(newSvg, p.name);
-  return { ...p, svg: r.svg, vb: r.vb, elements: r.elements };
+  return { ...p, svg: r.svg, vb: r.vb, plot: plotBox(r.elements, r.vb), elements: r.elements };
+}
+
+/** Re-bake a panel to the tightest box around its visible, non-background content
+ * (drops edge whitespace). Element sizes are preserved; the panel shrinks to fit. */
+function cropPanel(p: Panel, label: PanelLabelStyle): Panel {
+  if (p.mode === "layout-only") return p;
+  const els = p.elements.filter(
+    (e) => !e.hidden && e.role !== "background" && (e.bbox.w > 0 || e.bbox.h > 0)
+  );
+  if (!els.length) return p;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const e of els) {
+    x0 = Math.min(x0, e.bbox.x);
+    y0 = Math.min(y0, e.bbox.y);
+    x1 = Math.max(x1, e.bbox.x + e.bbox.w);
+    y1 = Math.max(y1, e.bbox.y + e.bbox.h);
+  }
+  const pad = Math.max(2, (x1 - x0) * 0.01);
+  // reserve room above the content for the top-left (a)(b)(c) label so cropping
+  // doesn't land it on the axes (label height + its inward gap + breathing room).
+  const labelM = label.format === "none" ? 0 : Math.round(label.fontSizePt * 1.333 + Math.max(0, label.offsetPx) + 6);
+  const box = { x: x0 - pad, y: y0 - pad - labelM, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 + labelM };
+  const out = bakeToCanvasSvg(p.svg, box, p.plot, box.w, box.h);
+  return reparsePanel({ ...p, w: box.w, h: box.h, aspect: box.w / box.h }, out.svg);
 }
 
 /**
@@ -318,7 +406,10 @@ function applyTypographyToPanel(p: Panel, typography: TypographySettings): Panel
       svg = applyEmphasis(svg, ser, ser.emphasis, typography.dataLineWidthPt, scale);
     }
   }
-  return { ...p, svg };
+  // reparse so derived elements (fontSizePx / strokeWidth) reflect the new svg —
+  // otherwise TunePanel shows stale values until the next resize forces a reparse
+  // (the "size jumps after zoom" symptom). Typography doesn't move axes, keep plot.
+  return { ...reparsePanel(p, svg), plot: p.plot };
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -331,6 +422,13 @@ export const useStore = create<AppState>((set, get) => ({
   activePaletteId: null,
   axisFrame: "original",
   bgTransparent: false,
+  tickVisX: true,
+  tickVisY: true,
+  axisLabelGap: 28,
+  innerPad: 0,
+  layoutLocked: false,
+  gridCols: 0,
+  gridGap: 16,
   exportSettings: DEFAULT_EXPORT,
 
   selectedPanelId: null,
@@ -361,13 +459,21 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => {
       const aspect = result!.vb.w / result!.vb.h || 1.4;
       const rect = placeNewPanel(s.panels, aspect, s.pageWidthMm, s.gutterMm);
+      const isFull = result!.mode !== "layout-only";
+      const plot0 = plotBox(result!.elements, result!.vb);
+      // Bake into 1:1 canvas pixel space so figsize re-lays-out instead of stretching.
+      const baked = isFull
+        ? bakeToCanvasSvg(result!.svg, result!.vb, plot0, rect.w, rect.h)
+        : { svg: result!.svg, plot: plot0 };
+      const re = isFull ? parseSvgString(baked.svg, name) : result!;
       const panel: Panel = {
         id: `p${Date.now().toString(36)}_${s.panels.length}`,
         name,
         label: "",
-        svg: result!.svg,
-        baseSvg: result!.svg,
-        vb: result!.vb,
+        svg: baked.svg,
+        baseSvg: baked.svg,
+        vb: isFull ? { x: 0, y: 0, w: rect.w, h: rect.h } : result!.vb,
+        plot: baked.plot,
         aspect,
         x: rect.x,
         y: rect.y,
@@ -376,15 +482,20 @@ export const useStore = create<AppState>((set, get) => ({
         aspectLocked: true,
         mode: result!.mode,
         warnings: result!.warnings,
-        elements: result!.elements,
-        series: result!.series,
+        elements: re.elements,
+        series: re.series,
         textToPath: result!.textToPath,
         order: s.panels.length
       };
       let prepared = panel;
-      if (panel.mode !== "layout-only") {
+      if (isFull) {
         if (s.axisFrame !== "original")
-          prepared = { ...prepared, svg: redrawAxisFrame(prepared.svg, plotBox(prepared), s.axisFrame) };
+          prepared = { ...prepared, svg: redrawAxisFrame(prepared.svg, prepared.plot, s.axisFrame) };
+        // apply the current global axis-title gap + tick visibility so a freshly
+        // imported panel matches the rest without the user re-toggling anything.
+        prepared = { ...prepared, svg: setAxisLabelGapSvg(prepared.svg, prepared.plot, s.axisLabelGap) };
+        if (!s.tickVisX) prepared = { ...prepared, svg: setTickVisSvg(prepared.svg, "x", false) };
+        if (!s.tickVisY) prepared = { ...prepared, svg: setTickVisSvg(prepared.svg, "y", false) };
         if (s.bgTransparent) prepared = { ...prepared, svg: setBgHiddenSvg(prepared.svg, true) };
       }
       const panels = relabel([...s.panels, prepared], s.labelStyle);
@@ -484,6 +595,7 @@ export const useStore = create<AppState>((set, get) => ({
       const { stroke, fill } = readElementColorSvg(src.svg, scid);
       const dash = el.strokeDasharray;
       const panels = s.panels.map((p) => {
+        if (p.id !== panelId) return p; // apply only within the current figure
         let svg = p.svg;
         for (const e of p.elements) {
           if (e.role !== role) continue;
@@ -491,7 +603,7 @@ export const useStore = create<AppState>((set, get) => ({
           if (fill && fill !== "none") svg = setElementStyle(svg, e.scid, "fill", fill);
           if (dash != null) svg = setElementStyle(svg, e.scid, "stroke-dasharray", dash);
         }
-        return svg === p.svg ? p : reparsePanel(p, svg);
+        return svg === p.svg ? p : { ...reparsePanel(p, svg), plot: p.plot };
       });
       return { panels };
     });
@@ -506,9 +618,19 @@ export const useStore = create<AppState>((set, get) => ({
 
   updatePanelRect: (id, rect) =>
     set((s) => ({
-      // Scaling is equal-ratio (whole sub-figure scales together); type/line are
-      // unified on demand via the "unify" action, not auto-compensated here.
-      panels: s.panels.map((p) => (p.id === id ? { ...p, ...rect } : p))
+      panels: s.panels.map((p) => {
+        if (p.id !== id) return p;
+        // pure move (w/h unchanged) just repositions; a resize re-lays-out the
+        // figure from the model — axes follow the box, text/strokes/markers fixed.
+        if (p.mode === "layout-only" || (rect.w === p.w && rect.h === p.h)) {
+          return { ...p, ...rect };
+        }
+        const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, rect.w, rect.h);
+        // reparse to refresh element bboxes (selection/frame/ticks); keep the
+        // geometric newPlot — re-detecting it from getBBox jitters and drifts on
+        // repeated resizes (edge X-tick labels creep outward).
+        return { ...reparsePanel({ ...p, ...rect }, out.svg), plot: out.plot };
+      })
     })),
 
   setPanelAspectLock: (id, locked) =>
@@ -545,22 +667,34 @@ export const useStore = create<AppState>((set, get) => ({
         let svg = p.svg;
         const series = p.series.map((ser) => {
           const idx = dataSeries.findIndex((d) => d.id === ser.id);
-          // gradient palette + a fill series -> light->dark gradient fill
+          const oldColor = ser.color;
+          let finalColor: string;
+          let gradientId: string | null = null;
           if (palette.gradients && ser.isFill) {
+            // gradient palette + a fill series -> light->dark gradient fill
             const grad = palette.gradients[idx % palette.gradients.length];
-            const gradId = `scgrad_${ser.id}`;
-            svg = applyGradientFillSvg(svg, ser.elementIds, grad, gradId);
-            return { ...ser, color: grad.to, gradientId: gradId };
+            gradientId = `scgrad_${ser.id}`;
+            svg = applyGradientFillSvg(svg, ser.elementIds, grad, gradientId);
+            finalColor = grad.to;
+          } else if (ser.isFill && !ser.hasMarker && ser.elementIds.length > 1) {
+            // bar chart: each discrete bar gets the next palette color (distinct categories)
+            ser.elementIds.forEach((eid, i) => {
+              svg = setSolidFillSvg(svg, [eid], palette.colors[i % palette.colors.length]);
+            });
+            finalColor = palette.colors[0];
+          } else if (ser.isFill) {
+            finalColor =
+              (palette.gradients ? palette.gradients[idx % palette.gradients.length].to : colors[idx]) ?? ser.color;
+            svg = setSolidFillSvg(svg, ser.elementIds, finalColor); // solid (clears prior gradient url)
+          } else {
+            finalColor =
+              (palette.gradients ? palette.gradients[idx % palette.gradients.length].to : colors[idx]) ?? ser.color;
+            svg = recolorSeriesSvg(svg, ser, finalColor); // line/marker series
           }
-          const color =
-            (palette.gradients ? palette.gradients[idx % palette.gradients.length].to : colors[idx]) ?? ser.color;
-          if (ser.isFill) {
-            // solid fill (also clears any prior gradient url)
-            svg = setSolidFillSvg(svg, ser.elementIds, color);
-            return { ...ser, color, gradientId: null };
-          }
-          svg = recolorSeriesSvg(svg, ser, color);
-          return { ...ser, color };
+          // recolor every legend key still drawn in the old color — a line+marker key has
+          // two swatches, and the fill recoloring paths above skip the legend entirely.
+          svg = recolorLegendSwatchesSvg(svg, oldColor, finalColor);
+          return { ...ser, color: finalColor, gradientId };
         });
         return { ...p, svg, series };
       });
@@ -629,7 +763,69 @@ export const useStore = create<AppState>((set, get) => ({
   tuneElement: (panelId, scid, prop, value) => {
     get().snapshot();
     set((s) => ({
-      panels: s.panels.map((p) => (p.id === panelId ? { ...p, svg: setElementStyle(p.svg, scid, prop, value) } : p))
+      panels: s.panels.map((p) =>
+        // reparse to refresh elements (so the edited value sticks in TunePanel and
+        // survives a later resize); keep plot — a style edit doesn't move the axes.
+        p.id === panelId ? { ...reparsePanel(p, setElementStyle(p.svg, scid, prop, value)), plot: p.plot } : p
+      )
+    }));
+  },
+
+  setElementText: (panelId, scid, text) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) =>
+        p.id === panelId ? { ...reparsePanel(p, setElementTextSvg(p.svg, scid, text)), plot: p.plot } : p
+      )
+    }));
+  },
+
+  setElementMarkerSize: (panelId, scid, r) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) =>
+        p.id === panelId ? { ...reparsePanel(p, setElementAttrSvg(p.svg, scid, "r", String(r))), plot: p.plot } : p
+      )
+    }));
+  },
+
+  setMarkerShape: (panelId, scid, shape) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) => {
+        if (p.id !== panelId) return p;
+        const src = p.elements.find((e) => e.scid === scid);
+        // apply to the whole series for a uniform look (fall back to the single marker)
+        const scids = src?.seriesId
+          ? p.elements.filter((e) => e.seriesId === src.seriesId).map((e) => e.scid)
+          : [scid];
+        return { ...reparsePanel(p, reshapeMarkersSvg(p.svg, scids, shape, null)), plot: p.plot };
+      })
+    }));
+  },
+
+  setMarkerSize: (panelId, scid, r) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) => {
+        if (p.id !== panelId) return p;
+        const src = p.elements.find((e) => e.scid === scid);
+        const scids = src?.seriesId
+          ? p.elements.filter((e) => e.seriesId === src.seriesId).map((e) => e.scid)
+          : [scid];
+        return { ...reparsePanel(p, reshapeMarkersSvg(p.svg, scids, null, r)), plot: p.plot };
+      })
+    }));
+  },
+
+  setElementGradient: (panelId, scid, from, to) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) =>
+        p.id === panelId
+          ? { ...reparsePanel(p, applyGradientFillSvg(p.svg, [scid], { from, to }, `scg_${scid}`)), plot: p.plot }
+          : p
+      )
     }));
   },
 
@@ -667,7 +863,9 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       axisFrame: style,
       panels: s.panels.map((p) =>
-        p.mode === "layout-only" ? p : { ...p, svg: redrawAxisFrame(p.svg, plotBox(p), style) }
+        // keep the existing plot: re-deriving it from the redrawn frame's getBBox
+        // (which includes stroke width) drifts the box a little on every toggle.
+        p.mode === "layout-only" ? p : { ...reparsePanel(p, redrawAxisFrame(p.svg, p.plot, style)), plot: p.plot }
       )
     }));
   },
@@ -678,6 +876,147 @@ export const useStore = create<AppState>((set, get) => ({
       bgTransparent: transparent,
       panels: s.panels.map((p) =>
         p.mode === "layout-only" ? p : { ...p, svg: setBgHiddenSvg(p.svg, transparent) }
+      )
+    }));
+  },
+
+  autoCropPanel: (id) => {
+    get().snapshot();
+    set((s) => ({ panels: s.panels.map((p) => (p.id === id ? cropPanel(p, s.labelStyle) : p)) }));
+  },
+
+  cropSelected: () => {
+    const ids = get().selectedPanelIds;
+    if (!ids.length) return;
+    get().snapshot();
+    set((s) => ({ panels: s.panels.map((p) => (ids.includes(p.id) ? cropPanel(p, s.labelStyle) : p)) }));
+  },
+
+  cropAll: () => {
+    if (!get().panels.length) return;
+    get().snapshot();
+    set((s) => ({ panels: s.panels.map((p) => cropPanel(p, s.labelStyle)) }));
+  },
+
+  matchSizeSelected: () => {
+    const ids = get().selectedPanelIds;
+    if (ids.length < 2) return;
+    get().snapshot();
+    set((s) => {
+      const sel = s.panels.filter((p) => ids.includes(p.id) && p.mode !== "layout-only");
+      if (sel.length < 2) return {};
+      const W = sel[0].w, H = sel[0].h; // match every selected panel to the first one's size
+      return {
+        panels: s.panels.map((p) => {
+          if (!ids.includes(p.id) || p.mode === "layout-only") return p;
+          if (Math.abs(p.w - W) < 0.5 && Math.abs(p.h - H) < 0.5) return p;
+          const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, W, H);
+          return { ...reparsePanel({ ...p, w: W, h: H, aspect: W / H }, out.svg), plot: out.plot };
+        })
+      };
+    });
+  },
+
+  setTickDirection: (direction) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) =>
+        p.mode === "layout-only" ? p : { ...p, svg: setTickDirSvg(p.svg, p.plot, direction) }
+      )
+    }));
+  },
+
+  setPanelTickDirection: (panelId, direction) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) =>
+        p.id === panelId && p.mode !== "layout-only" ? { ...p, svg: setTickDirSvg(p.svg, p.plot, direction) } : p
+      )
+    }));
+  },
+
+  setTickVisible: (axis, visible) => {
+    get().snapshot();
+    set((s) => ({
+      tickVisX: axis === "x" ? visible : s.tickVisX,
+      tickVisY: axis === "y" ? visible : s.tickVisY,
+      panels: s.panels.map((p) =>
+        p.mode === "layout-only" ? p : { ...reparsePanel(p, setTickVisSvg(p.svg, axis, visible)), plot: p.plot }
+      )
+    }));
+  },
+
+  setAxisLabelGap: (gap) => {
+    get().snapshot();
+    set((s) => ({
+      axisLabelGap: gap,
+      panels: s.panels.map((p) =>
+        p.mode === "layout-only" ? p : { ...reparsePanel(p, setAxisLabelGapSvg(p.svg, p.plot, gap)), plot: p.plot }
+      )
+    }));
+  },
+
+  setInnerPad: (pad) => {
+    get().snapshot();
+    set((s) => {
+      // inset the plot by the DELTA from the current padding (reversible), keeping
+      // each panel's position & size fixed — increases inter-panel whitespace
+      // without reflowing. plot follows the geometric inset (no getBBox jitter).
+      const delta = pad - s.innerPad;
+      return {
+        innerPad: pad,
+        panels: s.panels.map((p) => {
+          if (p.mode === "layout-only") return p;
+          const out = insetPlotSvg(p.svg, p.plot, delta);
+          return { ...reparsePanel(p, out.svg), plot: out.plot };
+        })
+      };
+    });
+  },
+
+  applyGrid: (cols) => {
+    get().snapshot();
+    set((s) => {
+      const ordered = [...s.panels].sort((a, b) => a.order - b.order);
+      const editable = ordered.filter((p) => p.mode !== "layout-only");
+      const g = s.gridGap;
+      const figW = s.pageWidthMm * FIG_PX_PER_MM;
+      const cellW = (figW - g * (cols - 1)) / cols;
+      const avgAspect = editable.length
+        ? editable.reduce((a, p) => a + (p.aspect || 1.4), 0) / editable.length
+        : 1.4;
+      const cellH = cellW / avgAspect;
+      const byId = new Map<string, Panel>();
+      ordered.forEach((p, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = col * (cellW + g);
+        const y = row * (cellH + g);
+        if (p.mode === "layout-only" || (Math.abs(p.w - cellW) < 0.5 && Math.abs(p.h - cellH) < 0.5)) {
+          byId.set(p.id, { ...p, x, y, w: cellW, h: cellH });
+        } else {
+          const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, cellW, cellH);
+          byId.set(p.id, { ...reparsePanel({ ...p, x, y, w: cellW, h: cellH }, out.svg), plot: out.plot });
+        }
+      });
+      // a grid is the "regular" fixed layout — lock it; the user unlocks to free-place.
+      return { gridCols: cols, layoutLocked: true, panels: s.panels.map((p) => byId.get(p.id) ?? p) };
+    });
+  },
+
+  setLayoutLocked: (locked) => set({ layoutLocked: locked }),
+
+  setGridGap: (px) => {
+    set({ gridGap: px });
+    // re-flow the current grid with the new gap (keeps columns + locked state)
+    if (get().gridCols > 0) get().applyGrid(get().gridCols);
+  },
+
+  moveAxisLabel: (panelId, scid, opts) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) =>
+        p.id === panelId ? reparsePanel(p, moveAxisLabelSvg(p.svg, scid, p.plot, opts)) : p
       )
     }));
   },

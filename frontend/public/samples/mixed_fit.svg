@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="340" viewBox="0 0 460 340">
+ <g id="figure">
+  <rect x="0" y="0" width="460" height="340" style="fill:#ffffff;"/>
+  <rect id="plotarea" x="70" y="30" width="380" height="240" style="fill:#ffffff;"/>
+  <path id="frame" d="M70 30 L450 30 L450 270 L70 270 Z" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <g id="xticks">
+   <path d="M70 270 L70 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M146 270 L146 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M222 270 L222 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M298 270 L298 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M374 270 L374 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M450 270 L450 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="xticklabels">
+   <text x="70" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">0</text>
+   <text x="146" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">2</text>
+   <text x="222" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">4</text>
+   <text x="298" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">6</text>
+   <text x="374" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">8</text>
+   <text x="450" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">10</text>
+  </g>
+  <g id="yticks">
+   <path d="M70 270 L76 270" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 210 L76 210" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 150 L76 150" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 90 L76 90" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 30 L76 30" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="yticklabels">
+   <text x="62" y="274" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">0</text>
+   <text x="62" y="214" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">2</text>
+   <text x="62" y="154" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">4</text>
+   <text x="62" y="94" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">6</text>
+   <text x="62" y="34" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">8</text>
+  </g>
+  <text id="xlabel" x="260" y="306" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Potential (V)</text>
+  <text id="ylabel" x="28" y="150" transform="rotate(-90 28 150)" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Current (mA)</text>
+  <g id="series_1">
+   <path id="band_1" d="M70 255 L146 225 L222 200 L298 180 L374 155 L450 125 L450 95 L374 125 L298 150 L222 170 L146 195 L70 225 Z" style="fill:#4878a8;fill-opacity:0.22;stroke:none;"/>
+   <polyline points="70,240 146,210 222,185 298,165 374,140 450,110" style="fill:none;stroke:#4878a8;stroke-width:1.8;"/>
+   <circle cx="70" cy="240" r="3" style="fill:#4878a8;"/>
+   <circle cx="146" cy="206" r="3" style="fill:#4878a8;"/>
+   <circle cx="222" cy="190" r="3" style="fill:#4878a8;"/>
+   <circle cx="298" cy="160" r="3" style="fill:#4878a8;"/>
+   <circle cx="374" cy="144" r="3" style="fill:#4878a8;"/>
+   <circle cx="450" cy="112" r="3" style="fill:#4878a8;"/>
+  </g>
+  <g id="series_2">
+   <polyline points="70,252 146,238 222,216 298,206 374,190 450,178" style="fill:none;stroke:#ee854a;stroke-width:1.8;"/>
+   <circle cx="70" cy="250" r="3" style="fill:#ee854a;"/>
+   <circle cx="146" cy="241" r="3" style="fill:#ee854a;"/>
+   <circle cx="222" cy="212" r="3" style="fill:#ee854a;"/>
+   <circle cx="298" cy="209" r="3" style="fill:#ee854a;"/>
+   <circle cx="374" cy="186" r="3" style="fill:#ee854a;"/>
+   <circle cx="450" cy="181" r="3" style="fill:#ee854a;"/>
+  </g>
+  <g id="legend">
+   <path d="M338 48 L360 48" style="fill:none;stroke:#4878a8;stroke-width:1.8;"/>
+   <circle cx="349" cy="48" r="3" style="fill:#4878a8;"/>
+   <text x="366" y="52" style="font-family:Arial;font-size:11px;fill:#000000;">Sample</text>
+   <path d="M338 66 L360 66" style="fill:none;stroke:#ee854a;stroke-width:1.8;"/>
+   <circle cx="349" cy="66" r="3" style="fill:#ee854a;"/>
+   <text x="366" y="70" style="font-family:Arial;font-size:11px;fill:#000000;">Reference</text>
+  </g>
+ </g>
+</svg>

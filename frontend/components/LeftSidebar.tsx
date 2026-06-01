@@ -1,14 +1,15 @@
 "use client";
 
-import { Trash2, ChevronUp, ChevronDown, Grid3x3, Magnet, Eraser } from "lucide-react";
-import { useStore, type AxisFrameStyle } from "@/lib/store";
+import { Trash2, ChevronUp, ChevronDown, Grid3x3, Magnet, Crop, Lock, Unlock } from "lucide-react";
+import { useStore, FIG_PX_PER_MM } from "@/lib/store";
 import { JOURNAL_PRESETS } from "@/lib/journals";
 
-const FRAMES: { v: AxisFrameStyle; label: string; title: string }[] = [
-  { v: "original", label: "Orig", title: "Keep the imported frame" },
-  { v: "full", label: "Full", title: "Redraw a full box frame" },
-  { v: "half", label: "Half", title: "Redraw a half (L) frame: left + bottom" },
-  { v: "none", label: "None", title: "Hide the frame" }
+// Grid presets — `cols` drives the arrangement; rows follow from the panel count.
+const GRIDS: { label: string; cols: number }[] = [
+  { label: "2×2", cols: 2 },
+  { label: "3×2", cols: 3 },
+  { label: "3×3", cols: 3 },
+  { label: "4×2", cols: 4 }
 ];
 
 export function LeftSidebar() {
@@ -17,20 +18,26 @@ export function LeftSidebar() {
   const selectPanel = useStore((s) => s.selectPanel);
   const removePanel = useStore((s) => s.removePanel);
   const reorderPanels = useStore((s) => s.reorderPanels);
+  const autoCropPanel = useStore((s) => s.autoCropPanel);
+  const setPanelTickDirection = useStore((s) => s.setPanelTickDirection);
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const setPageWidthMm = useStore((s) => s.setPageWidthMm);
-  const gutterMm = useStore((s) => s.gutterMm);
-  const setGutterMm = useStore((s) => s.setGutterMm);
-  const axisFrame = useStore((s) => s.axisFrame);
-  const setAxisFrame = useStore((s) => s.setAxisFrame);
-  const bgTransparent = useStore((s) => s.bgTransparent);
-  const setBackgroundTransparent = useStore((s) => s.setBackgroundTransparent);
+  const innerPad = useStore((s) => s.innerPad);
+  const setInnerPad = useStore((s) => s.setInnerPad);
+  const applyGrid = useStore((s) => s.applyGrid);
+  const layoutLocked = useStore((s) => s.layoutLocked);
+  const setLayoutLocked = useStore((s) => s.setLayoutLocked);
+  const gridCols = useStore((s) => s.gridCols);
+  const gridGap = useStore((s) => s.gridGap);
+  const setGridGap = useStore((s) => s.setGridGap);
   const showGrid = useStore((s) => s.showGrid);
   const snapEnabled = useStore((s) => s.snapEnabled);
   const toggleGrid = useStore((s) => s.toggleGrid);
   const toggleSnap = useStore((s) => s.toggleSnap);
+  const updatePanelRect = useStore((s) => s.updatePanelRect);
 
   const ordered = [...panels].sort((a, b) => a.order - b.order);
+  const selectedPanel = panels.find((p) => p.id === selectedPanelId) ?? null;
 
   const move = (id: string, dir: -1 | 1) => {
     const ids = ordered.map((p) => p.id);
@@ -43,9 +50,9 @@ export function LeftSidebar() {
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-panel">
-      {/* Layout */}
+      {/* Page & layout */}
       <div className="border-b border-line p-3">
-        <div className="panel-title mb-2">Layout</div>
+        <div className="panel-title mb-2">Page</div>
         <label className="field-label">Page width</label>
         <select
           className="input-dark mb-2 w-full"
@@ -73,31 +80,62 @@ export function LeftSidebar() {
           <span className="text-2xs text-faint">mm wide</span>
         </div>
 
-        <label className="field-label mt-3">Panel spacing</label>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            className="input-dark w-20"
-            value={Math.round(gutterMm)}
-            min={0}
-            max={40}
-            onChange={(e) => setGutterMm(Number(e.target.value))}
-          />
-          <span className="text-2xs text-faint">mm gutter</span>
-        </div>
-
-        <label className="field-label mt-3">Axis frame</label>
+        <div className="panel-title mb-2 mt-4 border-t border-line pt-3">Arrange</div>
+        <label className="field-label">Grid layout</label>
         <div className="grid grid-cols-4 gap-1">
-          {FRAMES.map((f) => (
+          {GRIDS.map((G) => (
             <button
-              key={f.v}
-              title={f.title}
-              onClick={() => setAxisFrame(f.v)}
-              className={`chip justify-center ${axisFrame === f.v ? "chip-on" : ""}`}
+              key={G.label}
+              className="chip justify-center"
+              onClick={() => applyGrid(G.cols)}
+              title={`Arrange panels into ${G.cols} columns, then lock`}
             >
-              {f.label}
+              {G.label}
             </button>
           ))}
+        </div>
+        <button
+          className={`chip mt-1 w-full justify-center gap-1 ${layoutLocked ? "chip-on" : ""}`}
+          onClick={() => setLayoutLocked(!layoutLocked)}
+          title={
+            layoutLocked
+              ? "Layout locked — click to free-place / resize panels"
+              : "Free layout — click to lock"
+          }
+        >
+          {layoutLocked ? <Lock size={12} /> : <Unlock size={12} />}
+          {layoutLocked ? "Locked" : "Free"}
+        </button>
+        {gridCols > 0 && (
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-2xs text-faint">Gap</span>
+            <input
+              type="range"
+              min={0}
+              max={48}
+              step={1}
+              value={gridGap}
+              onChange={(e) => setGridGap(Number(e.target.value))}
+              className="flex-1"
+              title="Spacing between grid cells"
+            />
+            <span className="w-9 text-right text-2xs text-faint">{gridGap}px</span>
+          </div>
+        )}
+
+        <label className="field-label mt-3">Panel inner padding</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min={0}
+            max={60}
+            step={1}
+            value={innerPad}
+            onChange={(e) => setInnerPad(Number(e.target.value))}
+            className="flex-1"
+            title="Whitespace added inside each panel (plot shrinks; panels stay put)"
+          />
+          <span className="w-9 text-right text-2xs text-faint">{innerPad}px</span>
         </div>
 
         <div className="mt-3 flex gap-2">
@@ -116,14 +154,6 @@ export function LeftSidebar() {
             <Magnet size={13} /> Snap
           </button>
         </div>
-
-        <button
-          className={`chip mt-2 w-full justify-center ${bgTransparent ? "chip-on" : ""}`}
-          onClick={() => setBackgroundTransparent(!bgTransparent)}
-          title="Remove figure backgrounds (make transparent)"
-        >
-          <Eraser size={13} /> Transparent background
-        </button>
       </div>
 
       {/* Panels */}
@@ -148,7 +178,7 @@ export function LeftSidebar() {
                   {p.name}
                 </span>
                 <button
-                  className="opacity-0 hover:text-ink group-hover:opacity-100 disabled:opacity-20"
+                  className="opacity-60 p-0.5 hover:text-ink hover:opacity-100 disabled:opacity-20"
                   disabled={i === 0}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -158,7 +188,7 @@ export function LeftSidebar() {
                   <ChevronUp size={12} />
                 </button>
                 <button
-                  className="opacity-0 hover:text-ink group-hover:opacity-100 disabled:opacity-20"
+                  className="opacity-60 p-0.5 hover:text-ink hover:opacity-100 disabled:opacity-20"
                   disabled={i === ordered.length - 1}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -168,7 +198,17 @@ export function LeftSidebar() {
                   <ChevronDown size={12} />
                 </button>
                 <button
-                  className="opacity-0 hover:text-bad group-hover:opacity-100"
+                  className="opacity-60 p-0.5 hover:text-accent hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    autoCropPanel(p.id);
+                  }}
+                  title="Auto-crop edge whitespace"
+                >
+                  <Crop size={12} />
+                </button>
+                <button
+                  className="opacity-60 p-0.5 hover:text-bad hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     removePanel(p.id);
@@ -180,6 +220,89 @@ export function LeftSidebar() {
             );
           })}
         </div>
+
+        {selectedPanel && (
+          <div className="mt-3 border-t border-line pt-2">
+            <div className="field-label mb-1">Selected size · {selectedPanel.label}</div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                className="input-dark w-14"
+                min={5}
+                value={Math.round(selectedPanel.w / FIG_PX_PER_MM)}
+                onChange={(e) =>
+                  updatePanelRect(selectedPanel.id, {
+                    x: selectedPanel.x,
+                    y: selectedPanel.y,
+                    w: Math.max(5, Number(e.target.value)) * FIG_PX_PER_MM,
+                    h: selectedPanel.h
+                  })
+                }
+              />
+              <span className="text-2xs text-faint">W</span>
+              <input
+                type="number"
+                className="input-dark w-14"
+                min={5}
+                value={Math.round(selectedPanel.h / FIG_PX_PER_MM)}
+                onChange={(e) =>
+                  updatePanelRect(selectedPanel.id, {
+                    x: selectedPanel.x,
+                    y: selectedPanel.y,
+                    w: selectedPanel.w,
+                    h: Math.max(5, Number(e.target.value)) * FIG_PX_PER_MM
+                  })
+                }
+              />
+              <span className="text-2xs text-faint">H mm</span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {([["1:1", 1], ["4:3", 4 / 3], ["3:2", 3 / 2], ["16:9", 16 / 9], ["2:1", 2]] as [string, number][]).map(
+                ([label, r]) => (
+                  <button
+                    key={label}
+                    className="chip px-1.5 py-0.5 text-2xs"
+                    title={`Width : height = ${label}`}
+                    onClick={() =>
+                      updatePanelRect(selectedPanel.id, {
+                        x: selectedPanel.x,
+                        y: selectedPanel.y,
+                        w: selectedPanel.w,
+                        h: selectedPanel.w / r
+                      })
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
+            <button
+              className="chip mt-1.5 w-full justify-center"
+              onClick={() => autoCropPanel(selectedPanel.id)}
+              title="Crop edge whitespace"
+            >
+              <Crop size={12} /> Auto-crop whitespace
+            </button>
+            <div className="field-label mb-1 mt-2">This panel&rsquo;s ticks</div>
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                className="chip justify-center"
+                onClick={() => setPanelTickDirection(selectedPanel.id, "in")}
+                title="Ticks inward (this panel only)"
+              >
+                Inward
+              </button>
+              <button
+                className="chip justify-center"
+                onClick={() => setPanelTickDirection(selectedPanel.id, "out")}
+                title="Ticks outward (this panel only)"
+              >
+                Outward
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

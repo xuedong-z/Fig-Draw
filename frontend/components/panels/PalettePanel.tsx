@@ -1,12 +1,23 @@
 "use client";
 
-import { Check, Eye } from "lucide-react";
+import { useState } from "react";
+import { Check, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { palettesByCategory, CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/palettes";
+import { palettesByCategory, CATEGORY_LABELS, CATEGORY_ORDER, findPalette } from "@/lib/palettes";
+import type { PaletteCategory } from "@/lib/types";
 
 export function PalettePanel() {
   const grouped = palettesByCategory();
   const activePaletteId = useStore((s) => s.activePaletteId);
+  const activeCat = activePaletteId ? findPalette(activePaletteId)?.category : null;
+  const [open, setOpen] = useState<Set<PaletteCategory>>(() => new Set<PaletteCategory>([activeCat ?? "journal"]));
+  const toggle = (c: PaletteCategory) =>
+    setOpen((prev) => {
+      const n = new Set(prev);
+      if (n.has(c)) n.delete(c);
+      else n.add(c);
+      return n;
+    });
   const applyPalette = useStore((s) => s.applyPalette);
   const recolorSeries = useStore((s) => s.recolorSeries);
   const panels = useStore((s) => s.panels);
@@ -23,36 +34,51 @@ export function PalettePanel() {
         text) is left untouched.
       </p>
 
-      {CATEGORY_ORDER.map((cat) => (
-        <div key={cat} className="mb-3">
-          <div className="field-label mb-1">{CATEGORY_LABELS[cat]}</div>
-          <div className="flex flex-col gap-1">
-            {grouped[cat].map((pal) => {
-              const active = pal.id === activePaletteId;
-              return (
-                <button
-                  key={pal.id}
-                  onClick={() => applyPalette(pal.id)}
-                  className={`flex items-center gap-2 rounded px-1.5 py-1 text-left ${
-                    active ? "bg-accent/15 ring-1 ring-accent/40" : "hover:bg-hover"
-                  }`}
-                >
-                  <span className="flex h-4 overflow-hidden rounded-sm border border-line">
-                    {pal.colors.slice(0, 7).map((c, i) => (
-                      <span key={i} className="h-full w-3" style={{ background: c }} />
-                    ))}
-                  </span>
-                  <span className="flex-1 truncate text-2xs text-ink">{pal.name}</span>
-                  {pal.colorblindSafe && (
-                    <Eye size={11} className="shrink-0 text-good" aria-label="colorblind-safe" />
-                  )}
-                  {active && <Check size={12} className="shrink-0 text-accent" />}
-                </button>
-              );
-            })}
+      {CATEGORY_ORDER.map((cat) => {
+        const list = grouped[cat];
+        if (!list.length) return null;
+        const isOpen = open.has(cat);
+        const hasActive = list.some((pal) => pal.id === activePaletteId);
+        return (
+          <div key={cat} className="mb-0.5">
+            <button
+              onClick={() => toggle(cat)}
+              className="flex w-full items-center gap-1 rounded px-0.5 py-1 text-left hover:bg-hover"
+            >
+              {isOpen ? <ChevronDown size={12} className="shrink-0 text-faint" /> : <ChevronRight size={12} className="shrink-0 text-faint" />}
+              <span className={`field-label flex-1 ${hasActive ? "text-accent" : ""}`}>{CATEGORY_LABELS[cat]}</span>
+              <span className="text-2xs text-faint">{list.length}</span>
+            </button>
+            {isOpen && (
+              <div className="mb-2 flex flex-col gap-1 pl-1">
+                {list.map((pal) => {
+                  const active = pal.id === activePaletteId;
+                  return (
+                    <button
+                      key={pal.id}
+                      onClick={() => applyPalette(pal.id)}
+                      className={`flex items-center gap-2 rounded px-1.5 py-1 text-left ${
+                        active ? "bg-accent/15 ring-1 ring-accent/40" : "hover:bg-hover"
+                      }`}
+                    >
+                      <span className="flex h-4 overflow-hidden rounded-sm border border-line">
+                        {pal.colors.slice(0, 7).map((c, i) => (
+                          <span key={i} className="h-full w-3" style={{ background: c }} />
+                        ))}
+                      </span>
+                      <span className="flex-1 truncate text-2xs text-ink">{pal.name}</span>
+                      {pal.colorblindSafe && (
+                        <Eye size={11} className="shrink-0 text-good" aria-label="colorblind-safe" />
+                      )}
+                      {active && <Check size={12} className="shrink-0 text-accent" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* per-series override */}
       <div className="mt-2 border-t border-line pt-3">

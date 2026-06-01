@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="340" viewBox="0 0 460 340">
+ <g id="figure">
+  <rect x="0" y="0" width="460" height="340" style="fill:#ffffff;"/>
+  <rect id="plotarea" x="70" y="30" width="380" height="240" style="fill:#ffffff;"/>
+  <path id="frame" d="M70 30 L450 30 L450 270 L70 270 Z" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <g id="xticks">
+   <path d="M70 270 L70 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M146 270 L146 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M222 270 L222 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M298 270 L298 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M374 270 L374 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M450 270 L450 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="xticklabels">
+   <text x="70" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">0</text>
+   <text x="146" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">10</text>
+   <text x="222" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">20</text>
+   <text x="298" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">30</text>
+   <text x="374" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">40</text>
+   <text x="450" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">50</text>
+  </g>
+  <g id="yticks">
+   <path d="M70 270 L76 270" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 210 L76 210" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 150 L76 150" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 90 L76 90" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 30 L76 30" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="yticklabels">
+   <text x="62" y="274" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">0</text>
+   <text x="62" y="214" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">20</text>
+   <text x="62" y="154" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">40</text>
+   <text x="62" y="94" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">60</text>
+   <text x="62" y="34" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">80</text>
+  </g>
+  <text id="xlabel" x="260" y="306" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Time (min)</text>
+  <text id="ylabel" x="28" y="150" transform="rotate(-90 28 150)" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Conversion (%)</text>
+  <g id="line2d_1"><polyline points="70,245 146,212 222,196 298,162 374,138 450,118" style="fill:none;stroke:#4878a8;stroke-width:1.6;"/></g>
+  <g id="line2d_2"><polyline points="70,252 146,232 222,202 298,186 374,150 450,134" style="fill:none;stroke:#ee854a;stroke-width:1.6;"/></g>
+  <g id="line2d_3"><polyline points="70,232 146,224 222,182 298,170 374,158 450,108" style="fill:none;stroke:#6acc64;stroke-width:1.6;"/></g>
+  <g id="line2d_4"><polyline points="70,256 146,205 222,212 298,150 374,166 450,126" style="fill:none;stroke:#d65f5f;stroke-width:1.6;stroke-dasharray:5,3;"/></g>
+  <g id="legend">
+   <path d="M340 46 L362 46" style="fill:none;stroke:#4878a8;stroke-width:1.6;"/>
+   <text x="368" y="50" style="font-family:Arial;font-size:11px;fill:#000000;">Catalyst A</text>
+   <path d="M340 62 L362 62" style="fill:none;stroke:#ee854a;stroke-width:1.6;"/>
+   <text x="368" y="66" style="font-family:Arial;font-size:11px;fill:#000000;">Catalyst B</text>
+   <path d="M340 78 L362 78" style="fill:none;stroke:#6acc64;stroke-width:1.6;"/>
+   <text x="368" y="82" style="font-family:Arial;font-size:11px;fill:#000000;">Catalyst C</text>
+   <path d="M340 94 L362 94" style="fill:none;stroke:#d65f5f;stroke-width:1.6;stroke-dasharray:5,3;"/>
+   <text x="368" y="98" style="font-family:Arial;font-size:11px;fill:#000000;">Control</text>
+  </g>
+ </g>
+</svg>

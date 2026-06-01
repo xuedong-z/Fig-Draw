@@ -122,37 +122,23 @@ export function TypographyPanel() {
       {/* Panel labels */}
       <div className="mt-4 border-t border-line pt-3">
         <div className="panel-title mb-2">Panel labels</div>
-        <div className="mb-2 grid grid-cols-2 gap-2">
-          <div>
-            <label className="field-label">Format</label>
-            <select
-              className="input-dark w-full"
-              value={labelStyle.format}
-              onChange={(e) => l("format", e.target.value as PanelLabelStyle["format"])}
-            >
-              <option value="(a)">(a)</option>
-              <option value="(A)">(A)</option>
-              <option value="a">a</option>
-              <option value="A">A</option>
-              <option value="none">none</option>
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Position</label>
-            <select
-              className="input-dark w-full"
-              value={labelStyle.position}
-              onChange={(e) => l("position", e.target.value as PanelLabelStyle["position"])}
-            >
-              <option value="tl">Top-left</option>
-              <option value="tr">Top-right</option>
-              <option value="bl">Bottom-left</option>
-              <option value="br">Bottom-right</option>
-            </select>
-          </div>
+        <div className="mb-2">
+          <label className="field-label">Format · fixed top-left</label>
+          <select
+            className="input-dark w-full"
+            value={labelStyle.format}
+            onChange={(e) => l("format", e.target.value as PanelLabelStyle["format"])}
+          >
+            <option value="(a)">(a)</option>
+            <option value="(A)">(A)</option>
+            <option value="a">a</option>
+            <option value="A">A</option>
+            <option value="none">none</option>
+          </select>
         </div>
         <div className="flex items-center gap-3">
           <NumRow label="Size (pt)" value={labelStyle.fontSizePt} onChange={(v) => l("fontSizePt", v)} />
+          <NumRow label="Gap (px)" value={labelStyle.offsetPx} min={0} step={1} onChange={(v) => l("offsetPx", v)} />
         </div>
         <div className="mt-2 flex items-center gap-3 text-2xs text-muted">
           <label className="flex items-center gap-1.5">

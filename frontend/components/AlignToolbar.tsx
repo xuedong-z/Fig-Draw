@@ -9,6 +9,8 @@ import {
   AlignEndHorizontal,
   AlignHorizontalDistributeCenter,
   AlignVerticalDistributeCenter,
+  Crop,
+  Maximize2,
   type LucideIcon
 } from "lucide-react";
 import { useStore, type AlignKind } from "@/lib/store";
@@ -26,6 +28,8 @@ export function AlignToolbar() {
   const selectedPanelIds = useStore((s) => s.selectedPanelIds);
   const alignPanels = useStore((s) => s.alignPanels);
   const distributePanels = useStore((s) => s.distributePanels);
+  const cropSelected = useStore((s) => s.cropSelected);
+  const matchSizeSelected = useStore((s) => s.matchSizeSelected);
 
   if (selectedPanelIds.length < 2) return null;
   const canDistribute = selectedPanelIds.length >= 3;
@@ -59,6 +63,21 @@ export function AlignToolbar() {
         className="rounded p-1 text-muted hover:bg-hover hover:text-ink disabled:opacity-30"
       >
         <AlignVerticalDistributeCenter size={15} />
+      </button>
+      <span className="mx-0.5 h-4 w-px bg-line" />
+      <button
+        title="Auto-crop whitespace on all selected panels"
+        onClick={cropSelected}
+        className="rounded p-1 text-muted hover:bg-hover hover:text-ink"
+      >
+        <Crop size={15} />
+      </button>
+      <button
+        title="Match all selected panels to the first one's size"
+        onClick={matchSizeSelected}
+        className="rounded p-1 text-muted hover:bg-hover hover:text-ink"
+      >
+        <Maximize2 size={15} />
       </button>
     </div>
   );

@@ -112,6 +112,7 @@ function rootBBox(el: SVGGraphicsElement): BBox {
 
 function isMarkerLike(el: Element): boolean {
   const tag = el.tagName.toLowerCase();
+  if (el.hasAttribute("data-scshape")) return true; // reshaped scatter marker
   if (tag === "use") return true;
   if (tag === "circle" || tag === "ellipse") return true;
   // a small filled path inside a marker/scatter group
@@ -122,6 +123,9 @@ function isMarkerLike(el: Element): boolean {
 /** Ensure the svg has xmlns + a viewBox so it renders predictably. */
 function ensureRenderable(svg: SVGSVGElement): BBox {
   if (!svg.getAttribute("xmlns")) svg.setAttribute("xmlns", SVGNS);
+  // figsize: stretch content to fill the box (axis lengths follow the box);
+  // figsize compensation keeps text + stroke widths fixed (see mutate.applyFigsize).
+  svg.setAttribute("preserveAspectRatio", "none");
   const vbAttr = svg.getAttribute("viewBox");
   if (vbAttr) {
     const [x, y, w, h] = vbAttr.split(/[\s,]+/).map(Number);
@@ -390,14 +394,20 @@ export function aggregateSeries(elements: ParsedElement[]): DataSeries[] {
 /** D3 — pair each series with a legend text by color proximity. */
 function pairLegends(series: DataSeries[], elements: ParsedElement[]): void {
   const legendTexts = elements.filter((e) => e.role === "text-legend");
-  const legendSwatches = elements.filter((e) => e.role === "legend" || (DATA_ROLES.includes(e.role) && e.pathLength < 40));
+  // Explicit legend swatches win. A tiny data glyph is only a *fallback* (matplotlib
+  // sometimes draws legend keys as small line2d/markers without a legend id). Without
+  // this preference a small scatter point (pathLength<40) gets matched as the "swatch",
+  // so recoloring hits the data point and the real legend key never changes.
+  const explicit = elements.filter((e) => e.role === "legend");
+  const fallback = elements.filter((e) => DATA_ROLES.includes(e.role) && e.pathLength < 40);
   const usedTexts = new Set<string>();
   for (const s of series) {
-    // find a swatch whose series color matches this series
-    const swatch = legendSwatches.find((sw) => {
+    const match = (sw: ParsedElement) => {
       const c = parseColor(seriesColorOf(sw));
-      return c && toHex(c) === s.color;
-    });
+      return !!c && toHex(c) === s.color;
+    };
+    // find a swatch whose color matches this series — explicit legend keys first
+    const swatch = explicit.find(match) ?? fallback.find(match);
     if (!swatch) continue;
     // nearest legend text by *vertical center* (text bbox.y is the top, so
     // comparing tops to the swatch line would bias toward the row below)

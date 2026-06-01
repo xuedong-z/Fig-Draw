@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="340" viewBox="0 0 460 340">
+ <g id="figure">
+  <rect x="0" y="0" width="460" height="340" style="fill:#ffffff;"/>
+  <rect id="plotarea" x="70" y="30" width="380" height="240" style="fill:#ffffff;"/>
+  <g id="xticks">
+   <path d="M70 270 L70 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M146 270 L146 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M222 270 L222 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M298 270 L298 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M374 270 L374 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M450 270 L450 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="xticklabels">
+   <text x="70" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">0</text>
+   <text x="146" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">5</text>
+   <text x="222" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">10</text>
+   <text x="298" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">15</text>
+   <text x="374" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">20</text>
+   <text x="450" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">25</text>
+  </g>
+  <g id="yticks">
+   <path d="M70 270 L76 270" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 210 L76 210" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 150 L76 150" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 90 L76 90" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 30 L76 30" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="yticklabels">
+   <text x="62" y="274" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">0</text>
+   <text x="62" y="214" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">25</text>
+   <text x="62" y="154" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">50</text>
+   <text x="62" y="94" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">75</text>
+   <text x="62" y="34" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">100</text>
+  </g>
+  <text id="xlabel" x="260" y="306" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Cycle number</text>
+  <text id="ylabel" x="28" y="150" transform="rotate(-90 28 150)" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Composition (%)</text>
+  <g id="fill_1"><path d="M70 270 L70 242 L146 232 L222 236 L298 226 L374 233 L450 229 L450 270 Z" style="fill:#4878a8;fill-opacity:0.85;stroke:none;"/></g>
+  <g id="fill_2"><path d="M70 242 L146 232 L222 236 L298 226 L374 233 L450 229 L450 180 L374 189 L298 181 L222 196 L146 186 L70 202 Z" style="fill:#ee854a;fill-opacity:0.85;stroke:none;"/></g>
+  <g id="fill_3"><path d="M70 202 L146 186 L222 196 L298 181 L374 189 L450 180 L450 120 L374 136 L298 122 L222 146 L146 132 L70 152 Z" style="fill:#6acc64;fill-opacity:0.85;stroke:none;"/></g>
+  <path id="x_axis" d="M70 270 L450 270" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <path id="y_axis" d="M70 270 L70 30" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <g id="legend">
+   <rect x="338" y="42" width="10" height="10" style="fill:#4878a8;fill-opacity:0.85;stroke:none;"/>
+   <text x="354" y="51" style="font-family:Arial;font-size:11px;fill:#000000;">Phase A</text>
+   <rect x="338" y="58" width="10" height="10" style="fill:#ee854a;fill-opacity:0.85;stroke:none;"/>
+   <text x="354" y="67" style="font-family:Arial;font-size:11px;fill:#000000;">Phase B</text>
+   <rect x="338" y="74" width="10" height="10" style="fill:#6acc64;fill-opacity:0.85;stroke:none;"/>
+   <text x="354" y="83" style="font-family:Arial;font-size:11px;fill:#000000;">Phase C</text>
+  </g>
+ </g>
+</svg>

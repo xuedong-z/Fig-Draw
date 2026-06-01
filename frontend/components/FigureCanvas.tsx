@@ -47,17 +47,15 @@ function snap1D(
   return best ? { pos: best.pos, guide: best.guide } : null;
 }
 
-function labelPosClass(pos: PanelLabelStyle["position"]): string {
-  switch (pos) {
-    case "tr":
-      return "right-1 top-0.5 text-right";
-    case "bl":
-      return "bottom-0.5 left-1";
-    case "br":
-      return "bottom-0.5 right-1 text-right";
-    default:
-      return "left-1 top-0.5";
-  }
+/** Corner inset for the panel label, in figure px — keeps (a)(b)(c) off the axes
+ * (esp. after Trim). Driven by labelStyle.offsetPx. */
+function labelPosStyle(pos: PanelLabelStyle["position"], off: number): { left?: number; right?: number; top?: number; bottom?: number } {
+  const v: { left?: number; right?: number; top?: number; bottom?: number } = {};
+  if (pos === "tr" || pos === "br") v.right = off;
+  else v.left = off;
+  if (pos === "bl" || pos === "br") v.bottom = off;
+  else v.top = off;
+  return v;
 }
 
 export function FigureCanvas() {
@@ -68,6 +66,7 @@ export function FigureCanvas() {
   const selectedElementId = useStore((s) => s.selectedElementId);
   const showGrid = useStore((s) => s.showGrid);
   const labelStyle = useStore((s) => s.labelStyle);
+  const layoutLocked = useStore((s) => s.layoutLocked);
 
   const figW = pageWidthMm * FIG_PX_PER_MM;
   const figH = useMemo(() => {
@@ -340,13 +339,24 @@ export function FigureCanvas() {
         r.scId = p.id;
         r.setControlsVisibility({ mtr: false }); // hide rotation; keep side + corner handles
         c.add(r);
-      } else if (c.getActiveObject() !== r) {
+      } else if (r.left !== p.x || r.top !== p.y || r.width !== p.w || r.height !== p.h) {
+        // sync from the store even for the active object, so numeric / preset size
+        // edits move the blue selection box too (after a drag the values already match)
         r.set({ left: p.x, top: p.y, width: p.w, height: p.h, scaleX: 1, scaleY: 1 });
         r.setCoords();
       }
+      // regular (grid) layout locks size + position; unlock = free placement. The
+      // panel stays selectable so element click-to-edit still works when locked.
+      r.set({
+        lockMovementX: layoutLocked,
+        lockMovementY: layoutLocked,
+        lockScalingX: layoutLocked,
+        lockScalingY: layoutLocked,
+        hasControls: !layoutLocked
+      });
     }
     c.requestRenderAll();
-  }, [panels]);
+  }, [panels, layoutLocked]);
 
   // ── reflect store selection -> fabric active object ──────────────────────
   useEffect(() => {
@@ -430,7 +440,7 @@ export function FigureCanvas() {
           <div
             key={p.id}
             ref={setOverlayRef(p.id)}
-            className="absolute overflow-hidden"
+            className="absolute"
             style={{
               left: p.x,
               top: p.y,
@@ -440,8 +450,10 @@ export function FigureCanvas() {
               outlineOffset: "1px"
             }}
           >
+            {/* only the SVG is clipped to the panel box; the (a)(b)(c) label can sit
+                outside it (negative gap) without being cut off */}
             <div
-              className="h-full w-full [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+              className="h-full w-full overflow-hidden [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
               dangerouslySetInnerHTML={{ __html: p.svg }}
             />
             {selEl && (
@@ -460,8 +472,10 @@ export function FigureCanvas() {
             )}
             {p.label && labelStyle.format !== "none" && (
               <span
-                className={`absolute font-semibold leading-none ${labelPosClass(labelStyle.position)}`}
+                className="absolute font-semibold leading-none"
                 style={{
+                  // labels are fixed top-left; gap (offsetPx) just nudges them inward
+                  ...labelPosStyle("tl", labelStyle.offsetPx ?? 4),
                   fontFamily: labelStyle.fontFamily,
                   fontSize: labelPx,
                   fontWeight: labelStyle.bold ? 700 : 400,

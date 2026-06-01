@@ -121,7 +121,8 @@ export interface Panel {
   label: string; // (a), (b)... auto-assigned
   svg: string; // SOURCE OF TRUTH — full <svg> string with data-sc* attrs
   baseSvg: string; // pristine original (for "reset")
-  vb: BBox; // viewBox of the svg (intrinsic units)
+  vb: BBox; // viewBox of the svg (= panel size in canvas px after the figsize bake)
+  plot: BBox; // plot-area box in current svg coords — drives model-based figsize
   aspect: number; // intrinsic w/h
   // Placement on the figure canvas, in figure-space pixels (top-left origin).
   x: number;
@@ -147,6 +148,7 @@ export interface PanelLabelStyle {
   bold: boolean;
   color: string;
   whiteBacking: boolean;
+  offsetPx: number; // distance from the panel corner (so labels don't hug the axes)
 }
 
 /** Typography defaults by role, in points (Module G). */
@@ -181,7 +183,10 @@ export interface ExportSettings {
 /** A named color palette from the library (Module E). */
 export type PaletteCategory =
   | "sequential"
+  | "diverging"
   | "categorical"
+  | "journal"
+  | "theme"
   | "muted"
   | "high-contrast"
   | "duo-trio"

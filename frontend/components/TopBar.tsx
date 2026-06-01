@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Upload, Undo2, Redo2, Download, FlaskConical } from "lucide-react";
+import { Upload, Undo2, Redo2, Download, FlaskConical, Scissors } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { ExampleMenu } from "./ExampleMenu";
 
@@ -13,6 +13,7 @@ export function TopBar() {
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
   const setRightTab = useStore((s) => s.setRightTab);
+  const cropAll = useStore((s) => s.cropAll);
   const panelCount = useStore((s) => s.panels.length);
 
   const onFiles = async (files: FileList | null) => {
@@ -54,6 +55,17 @@ export function TopBar() {
       </button>
       <button className="tool-btn" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
         <Redo2 size={15} /> Redo
+      </button>
+
+      <div className="h-5 w-px bg-line" />
+
+      <button
+        className="tool-btn"
+        onClick={cropAll}
+        disabled={panelCount === 0}
+        title="Trim edge whitespace on every panel"
+      >
+        <Scissors size={15} /> Trim
       </button>
 
       <div className="ml-auto" />
