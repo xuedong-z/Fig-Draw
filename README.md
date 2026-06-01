@@ -1,5 +1,10 @@
 # SciCompose
 
+[![Live demo](https://img.shields.io/badge/demo-fig--draw.pages.dev-5b63f0)](https://fig-draw.pages.dev)
+[![License: MIT](https://img.shields.io/badge/license-MIT-5b63f0.svg)](LICENSE)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000)
+![100% client-side](https://img.shields.io/badge/100%25-client--side-1f9d57)
+
 ### ▶ Use it now — no install: **https://fig-draw.pages.dev**
 
 A browser-based **post-processing editor for scientific figures**. Bring the SVGs you

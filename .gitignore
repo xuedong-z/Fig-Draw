@@ -27,3 +27,4 @@ __pycache__/
 
 # Claude Code local settings (keep launch.json, drop personal local settings)
 .claude/settings.local.json
+.claude/
