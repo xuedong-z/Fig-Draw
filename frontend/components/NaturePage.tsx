@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useStore, FIG_PX_PER_MM } from "@/lib/store";
 import { fakeParagraph } from "@/lib/fakeText";
 import { FigureCanvas } from "./FigureCanvas";
+import { AlignToolbar } from "./AlignToolbar";
 
 /** Editable caption continuation (keeps cursor stable, syncs on undo/redo). */
 function CaptionEditor() {
@@ -53,8 +54,9 @@ export function NaturePage() {
         <p className="body-col mb-5 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(23, 4)}</p>
 
         {/* ── Figure region (the editing stage; only this is exported) ── */}
-        <figure className="my-4" style={{ width: figW }}>
+        <figure className="relative my-4" style={{ width: figW }}>
           <FigureCanvas />
+          <AlignToolbar />
           <figcaption className="mt-3 text-[12px] leading-snug text-neutral-800">
             <b>Figure 1 |</b> <CaptionEditor />
           </figcaption>

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -31,58 +31,66 @@ textarea {
 /* Thin, dark scrollbars to match the tool UI */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a4452 transparent;
+  scrollbar-color: #cfd0d8 transparent;
 }
 *::-webkit-scrollbar {
   width: 9px;
   height: 9px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #3a4452;
+  background: #cfd0d8;
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: #4a5563;
+  background: #b8b9c2;
   background-clip: content-box;
 }
 
 @layer components {
-  /* Reusable small UI atoms */
+  /* Reusable small UI atoms — light design system */
+  /* Secondary button: control fill, hairline border, primary text */
   .tool-btn {
-    @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink/90
-           transition-colors hover:bg-hover disabled:opacity-40 disabled:hover:bg-transparent;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-line bg-control px-2.5 py-1.5 text-sm text-ink
+           transition-colors duration-100 ease-out hover:bg-hover
+           disabled:border-transparent disabled:bg-transparent disabled:text-faint disabled:hover:bg-transparent;
   }
+  /* Primary action: single accent, soft shadow */
   .tool-btn-primary {
-    @apply bg-accent text-white hover:bg-accent-hover hover:text-white;
+    @apply border-transparent bg-accent text-white shadow-sm hover:bg-accent-hover hover:text-white
+           disabled:bg-transparent disabled:text-faint disabled:shadow-none;
   }
+  /* Section label: 11px uppercase, .08em, tx-3 */
   .panel-title {
-    @apply text-2xs font-semibold uppercase tracking-wider text-muted;
+    @apply text-2xs font-semibold uppercase tracking-[0.08em] text-faint;
   }
   .field-label {
-    @apply block text-2xs font-medium uppercase tracking-wide text-muted;
+    @apply block text-2xs font-medium uppercase tracking-[0.08em] text-faint;
   }
+  /* Inputs: control fill, hairline, focus = accent border + white bg; numbers in mono */
   .input-dark {
-    @apply w-full rounded-md border border-line bg-elevated px-2 py-1.5 text-sm text-ink
-           outline-none focus:border-accent;
+    @apply w-full rounded-md border border-line bg-control px-2 py-1.5 font-mono text-sm text-ink
+           outline-none transition-colors duration-100 ease-out focus:border-accent focus:bg-paper;
   }
+  /* Chip / toggle: 6px radius (no pill), control fill */
   .chip {
-    @apply inline-flex cursor-pointer items-center justify-center gap-1 rounded-full border border-line
-           bg-elevated px-2 py-1 text-2xs text-muted transition-colors hover:text-ink;
+    @apply inline-flex cursor-pointer items-center justify-center gap-1 rounded-md border border-line
+           bg-control px-2 py-1 text-2xs text-muted transition-colors duration-100 ease-out hover:bg-hover hover:text-ink;
   }
+  /* Active option: accent-soft fill + accent text */
   .chip-on {
-    @apply border-accent/50 bg-accent/15 text-ink;
+    @apply border-transparent bg-accent-soft text-accent;
   }
 }
 
-/* Range slider styling for the dark UI */
+/* Range slider styling for the light UI */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
   border-radius: 999px;
-  background: #2a313c;
+  background: #dcdce3;
   outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -91,9 +99,10 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #4c8dff;
+  background: #5b63f0;
   cursor: pointer;
-  border: 2px solid #0e1116;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 2px rgba(18, 20, 40, 0.18);
 }
 
 /* The simulated journal paper uses real serif typography */

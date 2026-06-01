@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="340" viewBox="0 0 460 340">
+ <g id="figure">
+  <rect x="0" y="0" width="460" height="340" style="fill:#ffffff;"/>
+  <rect id="plotarea" x="70" y="30" width="380" height="240" style="fill:#ffffff;"/>
+  <path id="frame" d="M70 30 L450 30 L450 270 L70 270 Z" style="fill:none;stroke:#000000;stroke-width:1.2;"/>
+  <g id="xticks">
+   <path d="M70 270 L70 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M146 270 L146 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M222 270 L222 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M298 270 L298 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M374 270 L374 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M450 270 L450 264" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="xticklabels">
+   <text x="70" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">0</text>
+   <text x="146" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">2</text>
+   <text x="222" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">4</text>
+   <text x="298" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">6</text>
+   <text x="374" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">8</text>
+   <text x="450" y="286" style="font-family:Arial;font-size:11px;text-anchor:middle;fill:#000000;">10</text>
+  </g>
+  <g id="yticks">
+   <path d="M70 270 L76 270" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 210 L76 210" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 150 L76 150" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 90 L76 90" style="fill:none;stroke:#000000;stroke-width:1;"/>
+   <path d="M70 30 L76 30" style="fill:none;stroke:#000000;stroke-width:1;"/>
+  </g>
+  <g id="yticklabels">
+   <text x="62" y="274" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">0</text>
+   <text x="62" y="214" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">25</text>
+   <text x="62" y="154" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">50</text>
+   <text x="62" y="94" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">75</text>
+   <text x="62" y="34" style="font-family:Arial;font-size:11px;text-anchor:end;fill:#000000;">100</text>
+  </g>
+  <text id="xlabel" x="260" y="306" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Concentration (mM)</text>
+  <text id="ylabel" x="28" y="150" transform="rotate(-90 28 150)" style="font-family:Arial;font-size:13px;text-anchor:middle;fill:#000000;">Response (a.u.)</text>
+  <g id="PathCollection_1">
+   <circle cx="108" cy="238" r="3.2" style="fill:#4878a8;"/>
+   <circle cx="128" cy="226" r="3.2" style="fill:#4878a8;"/>
+   <circle cx="96" cy="247" r="3.2" style="fill:#4878a8;"/>
+   <circle cx="142" cy="233" r="3.2" style="fill:#4878a8;"/>
+   <circle cx="120" cy="252" r="3.2" style="fill:#4878a8;"/>
+   <circle cx="156" cy="221" r="3.2" style="fill:#4878a8;"/>
+   <circle cx="112" cy="244" r="3.2" style="fill:#4878a8;"/>
+   <circle cx="134" cy="230" r="3.2" style="fill:#4878a8;"/>
+  </g>
+  <g id="PathCollection_2">
+   <circle cx="222" cy="182" r="3.2" style="fill:#ee854a;"/>
+   <circle cx="242" cy="168" r="3.2" style="fill:#ee854a;"/>
+   <circle cx="206" cy="190" r="3.2" style="fill:#ee854a;"/>
+   <circle cx="252" cy="176" r="3.2" style="fill:#ee854a;"/>
+   <circle cx="230" cy="160" r="3.2" style="fill:#ee854a;"/>
+   <circle cx="262" cy="186" r="3.2" style="fill:#ee854a;"/>
+   <circle cx="214" cy="172" r="3.2" style="fill:#ee854a;"/>
+   <circle cx="246" cy="194" r="3.2" style="fill:#ee854a;"/>
+  </g>
+  <g id="PathCollection_3">
+   <circle cx="344" cy="112" r="3.2" style="fill:#6acc64;"/>
+   <circle cx="364" cy="96" r="3.2" style="fill:#6acc64;"/>
+   <circle cx="328" cy="120" r="3.2" style="fill:#6acc64;"/>
+   <circle cx="374" cy="104" r="3.2" style="fill:#6acc64;"/>
+   <circle cx="352" cy="126" r="3.2" style="fill:#6acc64;"/>
+   <circle cx="384" cy="92" r="3.2" style="fill:#6acc64;"/>
+   <circle cx="336" cy="108" r="3.2" style="fill:#6acc64;"/>
+   <circle cx="368" cy="118" r="3.2" style="fill:#6acc64;"/>
+  </g>
+  <g id="legend">
+   <circle cx="372" cy="48" r="3.2" style="fill:#4878a8;"/>
+   <text x="382" y="52" style="font-family:Arial;font-size:11px;fill:#000000;">Group A</text>
+   <circle cx="372" cy="66" r="3.2" style="fill:#ee854a;"/>
+   <text x="382" y="70" style="font-family:Arial;font-size:11px;fill:#000000;">Group B</text>
+   <circle cx="372" cy="84" r="3.2" style="fill:#6acc64;"/>
+   <text x="382" y="88" style="font-family:Arial;font-size:11px;fill:#000000;">Group C</text>
+  </g>
+ </g>
+</svg>

@@ -1,63 +1,40 @@
 "use client";
 
-import { Trash2, ChevronUp, ChevronDown, Lock, Unlock, Grid3x3, Magnet } from "lucide-react";
-import { useStore } from "@/lib/store";
-import { ROLE_LABELS, type ElementRole, type ParsedElement } from "@/lib/types";
+import { Trash2, ChevronUp, ChevronDown, Grid3x3, Magnet, Crop, Lock, Unlock } from "lucide-react";
+import { useStore, FIG_PX_PER_MM } from "@/lib/store";
 import { JOURNAL_PRESETS } from "@/lib/journals";
 
-const ROLE_KEYS = Object.keys(ROLE_LABELS) as ElementRole[];
-
-/** Order elements for the role list: data first, then structure, then text. */
-const ROLE_RANK: Record<string, number> = {
-  data: 0,
-  fit: 1,
-  scatter: 2,
-  errorbar: 3,
-  auxiliary: 4,
-  axis: 5,
-  tick: 6,
-  grid: 7,
-  background: 8,
-  legend: 9,
-  "text-title": 10,
-  "text-axis": 11,
-  "text-tick": 12,
-  "text-legend": 13,
-  decoration: 14,
-  unknown: 15
-};
-
-function swatchColor(el: ParsedElement): string | null {
-  if (el.stroke && el.stroke !== "none") return el.stroke;
-  if (el.fill && el.fill !== "none") return el.fill;
-  return null;
-}
-
-function elementText(el: ParsedElement): string {
-  if (el.text) return `"${el.text.slice(0, 18)}"`;
-  let t = el.tag;
-  if (el.hasMarker) t += " ·marker";
-  if (el.gradientId) t += " ·grad";
-  return t;
-}
+// Grid presets — `cols` drives the arrangement; rows follow from the panel count.
+const GRIDS: { label: string; cols: number }[] = [
+  { label: "2×2", cols: 2 },
+  { label: "3×2", cols: 3 },
+  { label: "3×3", cols: 3 },
+  { label: "4×2", cols: 4 }
+];
 
 export function LeftSidebar() {
   const panels = useStore((s) => s.panels);
   const selectedPanelId = useStore((s) => s.selectedPanelId);
-  const selectedElementId = useStore((s) => s.selectedElementId);
   const selectPanel = useStore((s) => s.selectPanel);
-  const selectElement = useStore((s) => s.selectElement);
   const removePanel = useStore((s) => s.removePanel);
   const reorderPanels = useStore((s) => s.reorderPanels);
-  const setPanelAspectLock = useStore((s) => s.setPanelAspectLock);
-  const setElementRole = useStore((s) => s.setElementRole);
-  const setRightTab = useStore((s) => s.setRightTab);
+  const autoCropPanel = useStore((s) => s.autoCropPanel);
+  const setPanelTickDirection = useStore((s) => s.setPanelTickDirection);
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const setPageWidthMm = useStore((s) => s.setPageWidthMm);
+  const innerPad = useStore((s) => s.innerPad);
+  const setInnerPad = useStore((s) => s.setInnerPad);
+  const applyGrid = useStore((s) => s.applyGrid);
+  const layoutLocked = useStore((s) => s.layoutLocked);
+  const setLayoutLocked = useStore((s) => s.setLayoutLocked);
+  const gridCols = useStore((s) => s.gridCols);
+  const gridGap = useStore((s) => s.gridGap);
+  const setGridGap = useStore((s) => s.setGridGap);
   const showGrid = useStore((s) => s.showGrid);
   const snapEnabled = useStore((s) => s.snapEnabled);
   const toggleGrid = useStore((s) => s.toggleGrid);
   const toggleSnap = useStore((s) => s.toggleSnap);
+  const updatePanelRect = useStore((s) => s.updatePanelRect);
 
   const ordered = [...panels].sort((a, b) => a.order - b.order);
   const selectedPanel = panels.find((p) => p.id === selectedPanelId) ?? null;
@@ -71,17 +48,11 @@ export function LeftSidebar() {
     reorderPanels(ids);
   };
 
-  const elements = selectedPanel
-    ? [...selectedPanel.elements].sort(
-        (a, b) => (ROLE_RANK[a.role] ?? 9) - (ROLE_RANK[b.role] ?? 9)
-      )
-    : [];
-
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-panel">
-      {/* Layout */}
+      {/* Page & layout */}
       <div className="border-b border-line p-3">
-        <div className="panel-title mb-2">Layout</div>
+        <div className="panel-title mb-2">Page</div>
         <label className="field-label">Page width</label>
         <select
           className="input-dark mb-2 w-full"
@@ -108,6 +79,65 @@ export function LeftSidebar() {
           />
           <span className="text-2xs text-faint">mm wide</span>
         </div>
+
+        <div className="panel-title mb-2 mt-4 border-t border-line pt-3">Arrange</div>
+        <label className="field-label">Grid layout</label>
+        <div className="grid grid-cols-4 gap-1">
+          {GRIDS.map((G) => (
+            <button
+              key={G.label}
+              className="chip justify-center"
+              onClick={() => applyGrid(G.cols)}
+              title={`Arrange panels into ${G.cols} columns, then lock`}
+            >
+              {G.label}
+            </button>
+          ))}
+        </div>
+        <button
+          className={`chip mt-1 w-full justify-center gap-1 ${layoutLocked ? "chip-on" : ""}`}
+          onClick={() => setLayoutLocked(!layoutLocked)}
+          title={
+            layoutLocked
+              ? "Layout locked — click to free-place / resize panels"
+              : "Free layout — click to lock"
+          }
+        >
+          {layoutLocked ? <Lock size={12} /> : <Unlock size={12} />}
+          {layoutLocked ? "Locked" : "Free"}
+        </button>
+        {gridCols > 0 && (
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-2xs text-faint">Gap</span>
+            <input
+              type="range"
+              min={0}
+              max={48}
+              step={1}
+              value={gridGap}
+              onChange={(e) => setGridGap(Number(e.target.value))}
+              className="flex-1"
+              title="Spacing between grid cells"
+            />
+            <span className="w-9 text-right text-2xs text-faint">{gridGap}px</span>
+          </div>
+        )}
+
+        <label className="field-label mt-3">Panel inner padding</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min={0}
+            max={60}
+            step={1}
+            value={innerPad}
+            onChange={(e) => setInnerPad(Number(e.target.value))}
+            className="flex-1"
+            title="Whitespace added inside each panel (plot shrinks; panels stay put)"
+          />
+          <span className="w-9 text-right text-2xs text-faint">{innerPad}px</span>
+        </div>
+
         <div className="mt-3 flex gap-2">
           <button
             className={`chip flex-1 ${showGrid ? "chip-on" : ""}`}
@@ -127,12 +157,12 @@ export function LeftSidebar() {
       </div>
 
       {/* Panels */}
-      <div className="border-b border-line p-3">
+      <div className="flex min-h-0 flex-1 flex-col p-3">
         <div className="panel-title mb-2">Panels · {panels.length}</div>
         {ordered.length === 0 && (
           <div className="text-2xs text-faint">No panels yet — import an SVG.</div>
         )}
-        <div className="flex flex-col gap-1">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
           {ordered.map((p, i) => {
             const active = p.id === selectedPanelId;
             return (
@@ -148,17 +178,7 @@ export function LeftSidebar() {
                   {p.name}
                 </span>
                 <button
-                  className="opacity-0 hover:text-accent group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPanelAspectLock(p.id, !p.aspectLocked);
-                  }}
-                  title={p.aspectLocked ? "Aspect locked" : "Aspect free"}
-                >
-                  {p.aspectLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                </button>
-                <button
-                  className="opacity-0 hover:text-ink group-hover:opacity-100 disabled:opacity-20"
+                  className="opacity-60 p-0.5 hover:text-ink hover:opacity-100 disabled:opacity-20"
                   disabled={i === 0}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -168,7 +188,7 @@ export function LeftSidebar() {
                   <ChevronUp size={12} />
                 </button>
                 <button
-                  className="opacity-0 hover:text-ink group-hover:opacity-100 disabled:opacity-20"
+                  className="opacity-60 p-0.5 hover:text-ink hover:opacity-100 disabled:opacity-20"
                   disabled={i === ordered.length - 1}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -178,7 +198,17 @@ export function LeftSidebar() {
                   <ChevronDown size={12} />
                 </button>
                 <button
-                  className="opacity-0 hover:text-bad group-hover:opacity-100"
+                  className="opacity-60 p-0.5 hover:text-accent hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    autoCropPanel(p.id);
+                  }}
+                  title="Auto-crop edge whitespace"
+                >
+                  <Crop size={12} />
+                </button>
+                <button
+                  className="opacity-60 p-0.5 hover:text-bad hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     removePanel(p.id);
@@ -190,68 +220,89 @@ export function LeftSidebar() {
             );
           })}
         </div>
-      </div>
 
-      {/* Elements & roles (Module D2) */}
-      <div className="flex min-h-0 flex-1 flex-col p-3">
-        <div className="panel-title mb-2">
-          Elements & roles {selectedPanel ? `· ${elements.length}` : ""}
-        </div>
-        {!selectedPanel && (
-          <div className="text-2xs text-faint">Select a panel to inspect its elements.</div>
-        )}
-        {selectedPanel?.textToPath && (
-          <div className="mb-2 rounded border border-warn/40 bg-[#2a2310] px-2 py-1 text-2xs text-amber-100">
-            Text was outlined to paths — fonts can&apos;t be re-typed, only recolored.
+        {selectedPanel && (
+          <div className="mt-3 border-t border-line pt-2">
+            <div className="field-label mb-1">Selected size · {selectedPanel.label}</div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                className="input-dark w-14"
+                min={5}
+                value={Math.round(selectedPanel.w / FIG_PX_PER_MM)}
+                onChange={(e) =>
+                  updatePanelRect(selectedPanel.id, {
+                    x: selectedPanel.x,
+                    y: selectedPanel.y,
+                    w: Math.max(5, Number(e.target.value)) * FIG_PX_PER_MM,
+                    h: selectedPanel.h
+                  })
+                }
+              />
+              <span className="text-2xs text-faint">W</span>
+              <input
+                type="number"
+                className="input-dark w-14"
+                min={5}
+                value={Math.round(selectedPanel.h / FIG_PX_PER_MM)}
+                onChange={(e) =>
+                  updatePanelRect(selectedPanel.id, {
+                    x: selectedPanel.x,
+                    y: selectedPanel.y,
+                    w: selectedPanel.w,
+                    h: Math.max(5, Number(e.target.value)) * FIG_PX_PER_MM
+                  })
+                }
+              />
+              <span className="text-2xs text-faint">H mm</span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {([["1:1", 1], ["4:3", 4 / 3], ["3:2", 3 / 2], ["16:9", 16 / 9], ["2:1", 2]] as [string, number][]).map(
+                ([label, r]) => (
+                  <button
+                    key={label}
+                    className="chip px-1.5 py-0.5 text-2xs"
+                    title={`Width : height = ${label}`}
+                    onClick={() =>
+                      updatePanelRect(selectedPanel.id, {
+                        x: selectedPanel.x,
+                        y: selectedPanel.y,
+                        w: selectedPanel.w,
+                        h: selectedPanel.w / r
+                      })
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
+            <button
+              className="chip mt-1.5 w-full justify-center"
+              onClick={() => autoCropPanel(selectedPanel.id)}
+              title="Crop edge whitespace"
+            >
+              <Crop size={12} /> Auto-crop whitespace
+            </button>
+            <div className="field-label mb-1 mt-2">This panel&rsquo;s ticks</div>
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                className="chip justify-center"
+                onClick={() => setPanelTickDirection(selectedPanel.id, "in")}
+                title="Ticks inward (this panel only)"
+              >
+                Inward
+              </button>
+              <button
+                className="chip justify-center"
+                onClick={() => setPanelTickDirection(selectedPanel.id, "out")}
+                title="Ticks outward (this panel only)"
+              >
+                Outward
+              </button>
+            </div>
           </div>
         )}
-        <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-1">
-          {selectedPanel &&
-            elements.map((el) => {
-            const c = swatchColor(el);
-            const active = el.scid === selectedElementId;
-            return (
-              <div
-                key={el.scid}
-                onClick={() => {
-                  selectElement(el.scid);
-                  setRightTab("tune");
-                }}
-                className={`flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 text-2xs ${
-                  active ? "bg-accent/15 ring-1 ring-accent/40" : "hover:bg-hover"
-                }`}
-              >
-                <span
-                  className="h-3 w-3 shrink-0 rounded-sm border border-line"
-                  style={
-                    c
-                      ? { background: c }
-                      : {
-                          backgroundImage:
-                            "linear-gradient(45deg,#444 25%,transparent 25%,transparent 75%,#444 75%)",
-                          backgroundSize: "4px 4px"
-                        }
-                  }
-                />
-                <span className="w-24 shrink-0 truncate text-muted" title={elementText(el)}>
-                  {elementText(el)}
-                </span>
-                <select
-                  className="input-dark ml-auto h-5 w-[88px] px-1 py-0 text-2xs"
-                  value={el.role}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={(e) => setElementRole(selectedPanel.id, el.scid, e.target.value as ElementRole)}
-                >
-                  {ROLE_KEYS.map((r) => (
-                    <option key={r} value={r}>
-                      {ROLE_LABELS[r]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </aside>
   );

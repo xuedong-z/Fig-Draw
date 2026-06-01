@@ -1,27 +1,46 @@
 "use client";
 
-import { Wand2 } from "lucide-react";
+import { Wand2, RotateCcw } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { PanelLabelStyle, TypographySettings } from "@/lib/types";
 
 const FONTS = ["Arial", "Helvetica", "Helvetica Neue", "Calibri", "Times New Roman", "Georgia"];
+
+/** Nature submission guideline values (sans-serif, 5–7 pt, ≥0.25 pt lines). */
+const NATURE_PRESET: TypographySettings = {
+  fontFamily: "Arial",
+  axisLabelPt: 7,
+  tickLabelPt: 6,
+  legendPt: 6,
+  titlePt: 7,
+  dataLineWidthPt: 1.0,
+  axisLineWidthPt: 0.5,
+  tickLineWidthPt: 0.5
+};
 
 function NumRow({
   label,
   value,
   step = 0.5,
   min = 0,
+  hint,
   onChange
 }: {
   label: string;
   value: number;
   step?: number;
   min?: number;
+  hint?: string;
   onChange: (v: number) => void;
 }) {
   return (
     <label className="flex items-center justify-between gap-2 text-2xs text-muted">
-      <span className="flex-1">{label}</span>
+      <span className="flex flex-1 items-center gap-1.5">
+        {label}
+        {hint && (
+          <span className="rounded bg-accent/15 px-1 text-[9px] font-medium text-accent">Nature {hint}</span>
+        )}
+      </span>
       <input
         type="number"
         className="input-dark w-16"
@@ -51,7 +70,8 @@ export function TypographyPanel() {
     <div className="p-3">
       <div className="panel-title mb-1">Typography</div>
       <p className="mb-3 text-2xs text-faint">
-        Set targets by role, then apply to unify every panel&apos;s fonts and line weights.
+        Targets by role; grey numbers are Nature recommendations. After laying panels out,
+        click Unify to normalize every sub-figure to these sizes.
       </p>
 
       <label className="field-label">Font family</label>
@@ -69,61 +89,56 @@ export function TypographyPanel() {
 
       <div className="field-label mb-1">Font size (pt)</div>
       <div className="mb-3 flex flex-col gap-1.5">
-        <NumRow label="Axis label" value={typography.axisLabelPt} onChange={(v) => t("axisLabelPt", v)} />
-        <NumRow label="Tick label" value={typography.tickLabelPt} onChange={(v) => t("tickLabelPt", v)} />
-        <NumRow label="Legend" value={typography.legendPt} onChange={(v) => t("legendPt", v)} />
-        <NumRow label="Title" value={typography.titlePt} onChange={(v) => t("titlePt", v)} />
+        <NumRow label="Axis label" value={typography.axisLabelPt} hint={`${NATURE_PRESET.axisLabelPt}`} onChange={(v) => t("axisLabelPt", v)} />
+        <NumRow label="Tick label" value={typography.tickLabelPt} hint={`${NATURE_PRESET.tickLabelPt}`} onChange={(v) => t("tickLabelPt", v)} />
+        <NumRow label="Legend" value={typography.legendPt} hint={`${NATURE_PRESET.legendPt}`} onChange={(v) => t("legendPt", v)} />
+        <NumRow label="Title" value={typography.titlePt} hint={`${NATURE_PRESET.titlePt}`} onChange={(v) => t("titlePt", v)} />
       </div>
 
       <div className="field-label mb-1">Line width (pt)</div>
       <div className="mb-3 flex flex-col gap-1.5">
-        <NumRow label="Data line" value={typography.dataLineWidthPt} step={0.1} onChange={(v) => t("dataLineWidthPt", v)} />
-        <NumRow label="Axis / frame" value={typography.axisLineWidthPt} step={0.1} onChange={(v) => t("axisLineWidthPt", v)} />
-        <NumRow label="Tick" value={typography.tickLineWidthPt} step={0.1} onChange={(v) => t("tickLineWidthPt", v)} />
+        <NumRow label="Data line" value={typography.dataLineWidthPt} step={0.1} hint={`${NATURE_PRESET.dataLineWidthPt}`} onChange={(v) => t("dataLineWidthPt", v)} />
+        <NumRow label="Axis / frame" value={typography.axisLineWidthPt} step={0.1} hint={`${NATURE_PRESET.axisLineWidthPt}`} onChange={(v) => t("axisLineWidthPt", v)} />
+        <NumRow label="Tick" value={typography.tickLineWidthPt} step={0.1} hint={`${NATURE_PRESET.tickLineWidthPt}`} onChange={(v) => t("tickLineWidthPt", v)} />
       </div>
 
-      <button
-        className="tool-btn tool-btn-primary w-full justify-center"
-        onClick={unifyTypography}
-        disabled={!hasPanels}
-      >
-        <Wand2 size={14} /> Apply to all panels
-      </button>
+      <div className="flex gap-2">
+        <button
+          className="tool-btn justify-center px-2"
+          onClick={() => setTypography(NATURE_PRESET)}
+          title="Reset all targets to Nature recommendations"
+        >
+          <RotateCcw size={13} />
+        </button>
+        <button
+          className="tool-btn tool-btn-primary flex-1 justify-center"
+          onClick={unifyTypography}
+          disabled={!hasPanels}
+        >
+          <Wand2 size={14} /> Unify to Nature size
+        </button>
+      </div>
 
       {/* Panel labels */}
       <div className="mt-4 border-t border-line pt-3">
         <div className="panel-title mb-2">Panel labels</div>
-        <div className="mb-2 grid grid-cols-2 gap-2">
-          <div>
-            <label className="field-label">Format</label>
-            <select
-              className="input-dark w-full"
-              value={labelStyle.format}
-              onChange={(e) => l("format", e.target.value as PanelLabelStyle["format"])}
-            >
-              <option value="(a)">(a)</option>
-              <option value="(A)">(A)</option>
-              <option value="a">a</option>
-              <option value="A">A</option>
-              <option value="none">none</option>
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Position</label>
-            <select
-              className="input-dark w-full"
-              value={labelStyle.position}
-              onChange={(e) => l("position", e.target.value as PanelLabelStyle["position"])}
-            >
-              <option value="tl">Top-left</option>
-              <option value="tr">Top-right</option>
-              <option value="bl">Bottom-left</option>
-              <option value="br">Bottom-right</option>
-            </select>
-          </div>
+        <div className="mb-2">
+          <label className="field-label">Format · fixed top-left</label>
+          <select
+            className="input-dark w-full"
+            value={labelStyle.format}
+            onChange={(e) => l("format", e.target.value as PanelLabelStyle["format"])}
+          >
+            <option value="(a)">(a)</option>
+            <option value="(A)">(A)</option>
+            <option value="a">a</option>
+            <option value="A">A</option>
+            <option value="none">none</option>
+          </select>
         </div>
         <div className="flex items-center gap-3">
           <NumRow label="Size (pt)" value={labelStyle.fontSizePt} onChange={(v) => l("fontSizePt", v)} />
+          <NumRow label="Gap (px)" value={labelStyle.offsetPx} min={0} step={1} onChange={(v) => l("offsetPx", v)} />
         </div>
         <div className="mt-2 flex items-center gap-3 text-2xs text-muted">
           <label className="flex items-center gap-1.5">

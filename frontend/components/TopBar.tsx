@@ -1,24 +1,43 @@
 "use client";
 
 import { useRef } from "react";
-import { Upload, Undo2, Redo2, Download, FlaskConical } from "lucide-react";
+import { Upload, Undo2, Redo2, Download, FlaskConical, Scissors } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { ExampleMenu } from "./ExampleMenu";
 
 export function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const importSvg = useStore((s) => s.importSvg);
+  const importImage = useStore((s) => s.importImage);
   const undo = useStore((s) => s.undo);
   const redo = useStore((s) => s.redo);
   const canUndo = useStore((s) => s.past.length > 0);
   const canRedo = useStore((s) => s.future.length > 0);
   const setRightTab = useStore((s) => s.setRightTab);
+  const cropAll = useStore((s) => s.cropAll);
   const panelCount = useStore((s) => s.panels.length);
 
   const onFiles = async (files: FileList | null) => {
     if (!files) return;
     for (const file of Array.from(files)) {
-      const text = await file.text();
-      importSvg(file.name.replace(/\.svg$/i, ""), text);
+      const base = file.name.replace(/\.[^.]+$/, "");
+      if (file.type === "image/svg+xml" || /\.svg$/i.test(file.name)) {
+        importSvg(base, await file.text());
+      } else if (file.type.startsWith("image/")) {
+        // raster (PNG/JPG/…): read as data URL + natural size, place as an image panel
+        const dataUrl = await new Promise<string>((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.readAsDataURL(file);
+        });
+        const dims = await new Promise<{ w: number; h: number }>((res) => {
+          const img = new Image();
+          img.onload = () => res({ w: img.naturalWidth || 400, h: img.naturalHeight || 300 });
+          img.onerror = () => res({ w: 400, h: 300 });
+          img.src = dataUrl;
+        });
+        importImage(base, dataUrl, dims.w, dims.h);
+      }
     }
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -34,16 +53,17 @@ export function TopBar() {
       <div className="h-5 w-px bg-line" />
 
       <button className="tool-btn tool-btn-primary" onClick={() => fileRef.current?.click()}>
-        <Upload size={15} /> Import SVG
+        <Upload size={15} /> Import
       </button>
       <input
         ref={fileRef}
         type="file"
-        accept=".svg,image/svg+xml"
+        accept=".svg,image/svg+xml,.png,.jpg,.jpeg,.webp,.gif,image/*"
         multiple
         className="hidden"
         onChange={(e) => onFiles(e.target.files)}
       />
+      <ExampleMenu />
 
       <div className="h-5 w-px bg-line" />
 
@@ -52,6 +72,17 @@ export function TopBar() {
       </button>
       <button className="tool-btn" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
         <Redo2 size={15} /> Redo
+      </button>
+
+      <div className="h-5 w-px bg-line" />
+
+      <button
+        className="tool-btn"
+        onClick={cropAll}
+        disabled={panelCount === 0}
+        title="Trim edge whitespace on every panel"
+      >
+        <Scissors size={15} /> Trim
       </button>
 
       <div className="ml-auto" />

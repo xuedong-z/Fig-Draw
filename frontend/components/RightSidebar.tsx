@@ -1,8 +1,9 @@
 "use client";
 
-import { Palette, Star, Type, SlidersHorizontal, Download } from "lucide-react";
+import { Palette, Star, Type, SlidersHorizontal, Download, Ruler } from "lucide-react";
 import { useStore, type RightTab } from "@/lib/store";
 import { PalettePanel } from "./panels/PalettePanel";
+import { AxisPanel } from "./panels/AxisPanel";
 import { EmphasisPanel } from "./panels/EmphasisPanel";
 import { TypographyPanel } from "./panels/TypographyPanel";
 import { TunePanel } from "./panels/TunePanel";
@@ -10,8 +11,9 @@ import { ExportPanel } from "./panels/ExportPanel";
 
 const TABS: { id: RightTab; label: string; icon: typeof Palette }[] = [
   { id: "palette", label: "Color", icon: Palette },
-  { id: "emphasis", label: "Emphasis", icon: Star },
+  { id: "axis", label: "Axis", icon: Ruler },
   { id: "type", label: "Type", icon: Type },
+  { id: "emphasis", label: "Emphasis", icon: Star },
   { id: "tune", label: "Tune", icon: SlidersHorizontal },
   { id: "export", label: "Export", icon: Download }
 ];
@@ -30,8 +32,8 @@ export function RightSidebar() {
             <button
               key={t.id}
               onClick={() => setRightTab(t.id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-2xs ${
-                active ? "border-b-2 border-accent text-ink" : "text-faint hover:text-muted"
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-2xs transition-colors duration-100 ease-out ${
+                active ? "border-b-2 border-accent text-accent" : "text-muted hover:text-ink"
               }`}
             >
               <Icon size={15} />
@@ -42,6 +44,7 @@ export function RightSidebar() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {rightTab === "palette" && <PalettePanel />}
+        {rightTab === "axis" && <AxisPanel />}
         {rightTab === "emphasis" && <EmphasisPanel />}
         {rightTab === "type" && <TypographyPanel />}
         {rightTab === "tune" && <TunePanel />}

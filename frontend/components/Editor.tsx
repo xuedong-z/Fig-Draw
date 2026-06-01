@@ -37,7 +37,13 @@ export function Editor() {
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <LeftSidebar />
-        <main className="relative min-w-0 flex-1 overflow-auto bg-[#0a0d12]">
+        <main
+          className="relative min-w-0 flex-1 overflow-auto bg-canvas"
+          style={{
+            backgroundImage: "radial-gradient(rgba(18,20,40,0.05) 1px, transparent 1px)",
+            backgroundSize: "22px 22px"
+          }}
+        >
           <NaturePage />
           <Messages />
         </main>

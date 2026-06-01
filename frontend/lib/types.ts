@@ -85,6 +85,7 @@ export interface ParsedElement {
   hasMarker: boolean; // marker-ish (circle/use/small repeated shapes)
   text: string | null; // text content for <text>
   fontSizePx: number | null;
+  hidden: boolean; // display:none (user-hidden via Tune)
 }
 
 /**
@@ -105,8 +106,9 @@ export interface DataSeries {
   order: number; // display/order index (user can reorder)
 }
 
-/** Why a panel might be restricted to layout-only mode (Module: import detection). */
-export type PanelMode = "full" | "layout-only";
+/** full = recognized SVG (editable); layout-only = SVG we don't recognize (heatmap,
+ * bitmap-in-SVG); image = a raster image (PNG/JPG) placed as a panel (scale/crop only). */
+export type PanelMode = "full" | "layout-only" | "image";
 
 export interface ImportWarning {
   kind: "text-as-path" | "bitmap" | "color-scale" | "parse";
@@ -120,7 +122,8 @@ export interface Panel {
   label: string; // (a), (b)... auto-assigned
   svg: string; // SOURCE OF TRUTH — full <svg> string with data-sc* attrs
   baseSvg: string; // pristine original (for "reset")
-  vb: BBox; // viewBox of the svg (intrinsic units)
+  vb: BBox; // viewBox of the svg (= panel size in canvas px after the figsize bake)
+  plot: BBox; // plot-area box in current svg coords — drives model-based figsize
   aspect: number; // intrinsic w/h
   // Placement on the figure canvas, in figure-space pixels (top-left origin).
   x: number;
@@ -146,6 +149,7 @@ export interface PanelLabelStyle {
   bold: boolean;
   color: string;
   whiteBacking: boolean;
+  offsetPx: number; // distance from the panel corner (so labels don't hug the axes)
 }
 
 /** Typography defaults by role, in points (Module G). */
@@ -180,7 +184,10 @@ export interface ExportSettings {
 /** A named color palette from the library (Module E). */
 export type PaletteCategory =
   | "sequential"
+  | "diverging"
   | "categorical"
+  | "journal"
+  | "theme"
   | "muted"
   | "high-contrast"
   | "duo-trio"
