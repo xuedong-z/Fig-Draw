@@ -16,8 +16,8 @@ export function Messages() {
           key={m.id}
           className={`pointer-events-auto flex items-start gap-2 rounded-md border px-3 py-2 text-xs shadow-pop backdrop-blur ${
             m.tone === "warn"
-              ? "border-warn/40 bg-[#2a2310]/95 text-amber-100"
-              : "border-line bg-elevated/95 text-ink"
+              ? "border-warn/40 bg-amber-50 text-amber-900"
+              : "border-line bg-paper/95 text-ink"
           }`}
         >
           {m.tone === "warn" ? (

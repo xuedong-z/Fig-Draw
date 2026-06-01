@@ -32,8 +32,8 @@ export function RightSidebar() {
             <button
               key={t.id}
               onClick={() => setRightTab(t.id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-2xs ${
-                active ? "border-b-2 border-accent text-ink" : "text-faint hover:text-muted"
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-2xs transition-colors duration-100 ease-out ${
+                active ? "border-b-2 border-accent text-accent" : "text-muted hover:text-ink"
               }`}
             >
               <Icon size={15} />

@@ -106,8 +106,9 @@ export interface DataSeries {
   order: number; // display/order index (user can reorder)
 }
 
-/** Why a panel might be restricted to layout-only mode (Module: import detection). */
-export type PanelMode = "full" | "layout-only";
+/** full = recognized SVG (editable); layout-only = SVG we don't recognize (heatmap,
+ * bitmap-in-SVG); image = a raster image (PNG/JPG) placed as a panel (scale/crop only). */
+export type PanelMode = "full" | "layout-only" | "image";
 
 export interface ImportWarning {
   kind: "text-as-path" | "bitmap" | "color-scale" | "parse";

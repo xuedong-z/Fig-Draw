@@ -147,6 +147,7 @@ interface AppState {
 
   // actions
   importSvg: (name: string, raw: string) => void;
+  importImage: (name: string, dataUrl: string, iw: number, ih: number) => void;
   removePanel: (id: string) => void;
   selectPanel: (id: string | null) => void;
   togglePanelSelected: (id: string) => void;
@@ -336,7 +337,7 @@ function reflow(panels: Panel[], pageWidthMm: number, gutterMm: number): Panel[]
   });
   return panels.map((p) => {
     const r = rect.get(p.id)!;
-    if (p.mode === "layout-only" || (r.w === p.w && r.h === p.h)) return { ...p, ...r };
+    if (p.mode !== "full" || (r.w === p.w && r.h === p.h)) return { ...p, ...r };
     const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, r.w, r.h);
     // keep the geometric newPlot (exact + reversible) rather than re-detecting the
     // plot from getBBox each resize — the latter jitters and accumulates drift.
@@ -369,7 +370,7 @@ function reparsePanel(p: Panel, newSvg: string): Panel {
 /** Re-bake a panel to the tightest box around its visible, non-background content
  * (drops edge whitespace). Element sizes are preserved; the panel shrinks to fit. */
 function cropPanel(p: Panel, label: PanelLabelStyle): Panel {
-  if (p.mode === "layout-only") return p;
+  if (p.mode !== "full") return p;
   const els = p.elements.filter(
     (e) => !e.hidden && e.role !== "background" && (e.bbox.w > 0 || e.bbox.h > 0)
   );
@@ -398,7 +399,7 @@ function cropPanel(p: Panel, label: PanelLabelStyle): Panel {
  * don't accumulate. Emphasis is re-asserted last so emphasized widths win.
  */
 function applyTypographyToPanel(p: Panel, typography: TypographySettings): Panel {
-  if (p.mode === "layout-only") return p;
+  if (p.mode !== "full") return p;
   const scale = panelScale(p.vb.w, p.vb.h, p.w, p.h);
   let svg = unifyTypographySvg(p.svg, typography, scale);
   for (const ser of p.series) {
@@ -513,6 +514,44 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
+  importImage: (name, dataUrl, iw, ih) => {
+    get().snapshot();
+    set((s) => {
+      const aspect = iw / ih || 1.4;
+      const rect = placeNewPanel(s.panels, aspect, s.pageWidthMm, s.gutterMm);
+      // Wrap the raster in an SVG so it reuses the entire panel system (layout, grid,
+      // align, labels, export). "slice" = cover: resizing to a new aspect crops it
+      // (centered) instead of distorting — that's how cropping works for images.
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${iw}" height="${ih}" viewBox="0 0 ${iw} ${ih}" ` +
+        `preserveAspectRatio="xMidYMid slice"><image href="${dataUrl}" x="0" y="0" width="${iw}" height="${ih}" ` +
+        `preserveAspectRatio="xMidYMid slice"/></svg>`;
+      const panel: Panel = {
+        id: `p${Date.now().toString(36)}_${s.panels.length}`,
+        name,
+        label: "",
+        svg,
+        baseSvg: svg,
+        vb: { x: 0, y: 0, w: iw, h: ih },
+        plot: { x: 0, y: 0, w: iw, h: ih },
+        aspect,
+        x: rect.x,
+        y: rect.y,
+        w: rect.w,
+        h: rect.h,
+        aspectLocked: true,
+        mode: "image",
+        warnings: [],
+        elements: [],
+        series: [],
+        textToPath: false,
+        order: s.panels.length
+      };
+      const panels = relabel([...s.panels, panel], s.labelStyle);
+      return { panels, selectedPanelId: panel.id, selectedElementId: null };
+    });
+  },
+
   removePanel: (id) => {
     get().snapshot();
     set((s) => {
@@ -622,7 +661,7 @@ export const useStore = create<AppState>((set, get) => ({
         if (p.id !== id) return p;
         // pure move (w/h unchanged) just repositions; a resize re-lays-out the
         // figure from the model — axes follow the box, text/strokes/markers fixed.
-        if (p.mode === "layout-only" || (rect.w === p.w && rect.h === p.h)) {
+        if (p.mode !== "full" || (rect.w === p.w && rect.h === p.h)) {
           return { ...p, ...rect };
         }
         const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, rect.w, rect.h);
@@ -661,7 +700,7 @@ export const useStore = create<AppState>((set, get) => ({
     get().snapshot();
     set((s) => {
       const panels = s.panels.map((p) => {
-        if (p.mode === "layout-only") return p;
+        if (p.mode !== "full") return p;
         const dataSeries = [...p.series].sort((a, b) => a.order - b.order);
         const colors = colorsForCount(palette, dataSeries.length);
         let svg = p.svg;
@@ -865,7 +904,7 @@ export const useStore = create<AppState>((set, get) => ({
       panels: s.panels.map((p) =>
         // keep the existing plot: re-deriving it from the redrawn frame's getBBox
         // (which includes stroke width) drifts the box a little on every toggle.
-        p.mode === "layout-only" ? p : { ...reparsePanel(p, redrawAxisFrame(p.svg, p.plot, style)), plot: p.plot }
+        p.mode !== "full" ? p : { ...reparsePanel(p, redrawAxisFrame(p.svg, p.plot, style)), plot: p.plot }
       )
     }));
   },
@@ -875,7 +914,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       bgTransparent: transparent,
       panels: s.panels.map((p) =>
-        p.mode === "layout-only" ? p : { ...p, svg: setBgHiddenSvg(p.svg, transparent) }
+        p.mode !== "full" ? p : { ...p, svg: setBgHiddenSvg(p.svg, transparent) }
       )
     }));
   },
@@ -903,12 +942,12 @@ export const useStore = create<AppState>((set, get) => ({
     if (ids.length < 2) return;
     get().snapshot();
     set((s) => {
-      const sel = s.panels.filter((p) => ids.includes(p.id) && p.mode !== "layout-only");
+      const sel = s.panels.filter((p) => ids.includes(p.id) && p.mode === "full");
       if (sel.length < 2) return {};
       const W = sel[0].w, H = sel[0].h; // match every selected panel to the first one's size
       return {
         panels: s.panels.map((p) => {
-          if (!ids.includes(p.id) || p.mode === "layout-only") return p;
+          if (!ids.includes(p.id) || p.mode !== "full") return p;
           if (Math.abs(p.w - W) < 0.5 && Math.abs(p.h - H) < 0.5) return p;
           const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, W, H);
           return { ...reparsePanel({ ...p, w: W, h: H, aspect: W / H }, out.svg), plot: out.plot };
@@ -921,7 +960,7 @@ export const useStore = create<AppState>((set, get) => ({
     get().snapshot();
     set((s) => ({
       panels: s.panels.map((p) =>
-        p.mode === "layout-only" ? p : { ...p, svg: setTickDirSvg(p.svg, p.plot, direction) }
+        p.mode !== "full" ? p : { ...p, svg: setTickDirSvg(p.svg, p.plot, direction) }
       )
     }));
   },
@@ -930,7 +969,7 @@ export const useStore = create<AppState>((set, get) => ({
     get().snapshot();
     set((s) => ({
       panels: s.panels.map((p) =>
-        p.id === panelId && p.mode !== "layout-only" ? { ...p, svg: setTickDirSvg(p.svg, p.plot, direction) } : p
+        p.id === panelId && p.mode === "full" ? { ...p, svg: setTickDirSvg(p.svg, p.plot, direction) } : p
       )
     }));
   },
@@ -941,7 +980,7 @@ export const useStore = create<AppState>((set, get) => ({
       tickVisX: axis === "x" ? visible : s.tickVisX,
       tickVisY: axis === "y" ? visible : s.tickVisY,
       panels: s.panels.map((p) =>
-        p.mode === "layout-only" ? p : { ...reparsePanel(p, setTickVisSvg(p.svg, axis, visible)), plot: p.plot }
+        p.mode !== "full" ? p : { ...reparsePanel(p, setTickVisSvg(p.svg, axis, visible)), plot: p.plot }
       )
     }));
   },
@@ -951,7 +990,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       axisLabelGap: gap,
       panels: s.panels.map((p) =>
-        p.mode === "layout-only" ? p : { ...reparsePanel(p, setAxisLabelGapSvg(p.svg, p.plot, gap)), plot: p.plot }
+        p.mode !== "full" ? p : { ...reparsePanel(p, setAxisLabelGapSvg(p.svg, p.plot, gap)), plot: p.plot }
       )
     }));
   },
@@ -966,7 +1005,7 @@ export const useStore = create<AppState>((set, get) => ({
       return {
         innerPad: pad,
         panels: s.panels.map((p) => {
-          if (p.mode === "layout-only") return p;
+          if (p.mode !== "full") return p;
           const out = insetPlotSvg(p.svg, p.plot, delta);
           return { ...reparsePanel(p, out.svg), plot: out.plot };
         })
@@ -978,7 +1017,7 @@ export const useStore = create<AppState>((set, get) => ({
     get().snapshot();
     set((s) => {
       const ordered = [...s.panels].sort((a, b) => a.order - b.order);
-      const editable = ordered.filter((p) => p.mode !== "layout-only");
+      const editable = ordered.filter((p) => p.mode === "full");
       const g = s.gridGap;
       const figW = s.pageWidthMm * FIG_PX_PER_MM;
       const cellW = (figW - g * (cols - 1)) / cols;
@@ -992,7 +1031,7 @@ export const useStore = create<AppState>((set, get) => ({
         const row = Math.floor(i / cols);
         const x = col * (cellW + g);
         const y = row * (cellH + g);
-        if (p.mode === "layout-only" || (Math.abs(p.w - cellW) < 0.5 && Math.abs(p.h - cellH) < 0.5)) {
+        if (p.mode !== "full" || (Math.abs(p.w - cellW) < 0.5 && Math.abs(p.h - cellH) < 0.5)) {
           byId.set(p.id, { ...p, x, y, w: cellW, h: cellH });
         } else {
           const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, cellW, cellH);

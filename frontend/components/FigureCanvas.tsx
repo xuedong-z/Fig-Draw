@@ -22,7 +22,7 @@ import { EXAMPLES, loadExample } from "@/lib/examples";
 
 const SNAP = 6; // px snap threshold
 const FAINT = "#c7ced8";
-const ACCENT = "#4c8dff";
+const ACCENT = "#5b63f0";
 
 type RectWithId = Rect & { scId?: string };
 
@@ -398,17 +398,17 @@ export function FigureCanvas() {
           className="pointer-events-none absolute inset-0 z-0"
           style={{
             backgroundImage:
-              "linear-gradient(to right, rgba(76,141,255,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(76,141,255,0.06) 1px, transparent 1px)",
+              "linear-gradient(to right, rgba(91,99,240,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(91,99,240,0.06) 1px, transparent 1px)",
             backgroundSize: `${FIG_PX_PER_MM * 10}px ${FIG_PX_PER_MM * 10}px`
           }}
         />
       )}
 
       {panels.length === 0 && (
-        <div className="pointer-events-none absolute inset-3 z-[5] grid place-items-center rounded border border-dashed border-neutral-300">
+        <div className="pointer-events-none absolute inset-3 z-[5] grid place-items-center rounded-lg border border-dashed border-line">
           <div className="text-center">
-            <div className="text-sm font-medium text-neutral-400">Import an SVG to begin</div>
-            <div className="mt-1 text-2xs text-neutral-300">
+            <div className="text-sm font-medium text-muted">Import an SVG to begin</div>
+            <div className="mt-1 text-2xs text-faint">
               Import your exported sub-figures, or try an example:
             </div>
             <div className="pointer-events-auto mt-2 flex flex-wrap justify-center gap-1.5">
@@ -417,7 +417,7 @@ export function FigureCanvas() {
                   key={ex.file}
                   onClick={() => loadExample(ex, useStore.getState().importSvg)}
                   title={ex.desc}
-                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-2xs text-neutral-500 hover:border-accent hover:text-accent"
+                  className="rounded-md border border-dashed border-line bg-control px-2 py-1 text-2xs text-muted transition-colors duration-100 ease-out hover:bg-hover hover:text-ink"
                 >
                   {ex.name}
                 </button>
@@ -446,7 +446,7 @@ export function FigureCanvas() {
               top: p.y,
               width: p.w,
               height: p.h,
-              outline: multiSel ? "2px solid #4c8dff" : undefined,
+              outline: multiSel ? "2px solid #5b63f0" : undefined,
               outlineOffset: "1px"
             }}
           >
@@ -464,9 +464,9 @@ export function FigureCanvas() {
                   top: `${((selEl.bbox.y - p.vb.y) / p.vb.h) * 100}%`,
                   width: `${(selEl.bbox.w / p.vb.w) * 100}%`,
                   height: `${(selEl.bbox.h / p.vb.h) * 100}%`,
-                  outline: "1.5px solid #4c8dff",
+                  outline: "1.5px solid #5b63f0",
                   outlineOffset: "1px",
-                  background: "rgba(76,141,255,0.1)"
+                  background: "rgba(91,99,240,0.1)"
                 }}
               />
             )}
