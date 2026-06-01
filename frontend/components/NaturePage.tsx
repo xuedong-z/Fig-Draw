@@ -37,23 +37,26 @@ export function NaturePage() {
         className="journal-paper relative h-fit rounded-[2px] bg-paper shadow-paper"
         style={{ width: figW + pagePadding * 2, paddingLeft: pagePadding, paddingRight: pagePadding, paddingTop: 44, paddingBottom: 56 }}
       >
-        {/* running head */}
-        <div className="mb-5 flex items-baseline justify-between border-b border-neutral-200 pb-2">
+        {/* running head — faint, slightly blurred background context */}
+        <div className="mb-5 flex items-baseline justify-between border-b border-neutral-200 pb-2 blur-[0.5px]">
           <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-400">Article</span>
           <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-400">Nature · Research</span>
         </div>
 
-        <h1 className="mb-3 font-serif text-[19px] font-semibold leading-snug text-neutral-900">
+        <h1 className="mb-3 font-serif text-[19px] font-semibold leading-snug text-neutral-900 blur-[0.6px]">
           Interfacial engineering of electrocatalysts for stable energy storage
         </h1>
-        <p className="mb-4 text-[11px] italic leading-snug text-neutral-500">
+        <p className="mb-4 text-[11px] italic leading-snug text-neutral-500 blur-[0.6px]">
           A. Researcher, B. Coauthor &amp; C. Principal · Department of Materials Science
         </p>
 
-        <p className="body-col mb-3 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(7, 5)}</p>
-        <p className="body-col mb-5 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(23, 4)}</p>
+        {/* body text: two-column journal layout, gently blurred so the figure stays the focus */}
+        <div className="mb-1 columns-2 gap-6 blur-[0.6px]">
+          <p className="body-col mb-3 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(7, 5)}</p>
+          <p className="body-col text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(23, 4)}</p>
+        </div>
 
-        {/* ── Figure region (the editing stage; only this is exported) ── */}
+        {/* ── Figure region (the editing stage; only this is exported) — kept sharp ── */}
         <figure className="relative my-4" style={{ width: figW }}>
           <FigureCanvas />
           <AlignToolbar />
@@ -62,8 +65,10 @@ export function NaturePage() {
           </figcaption>
         </figure>
 
-        <p className="body-col mt-5 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(41, 5)}</p>
-        <p className="body-col mt-3 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(58, 4)}</p>
+        <div className="mt-4 columns-2 gap-6 blur-[0.6px]">
+          <p className="body-col mb-3 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(41, 5)}</p>
+          <p className="body-col text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(58, 4)}</p>
+        </div>
 
         {/* corner watermark (never exported) */}
         <div className="pointer-events-none absolute bottom-2 right-3 select-none text-[9px] uppercase tracking-widest text-neutral-300">
