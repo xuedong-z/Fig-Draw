@@ -9,6 +9,7 @@
 "use client";
 import { create } from "zustand";
 import type {
+  BBox,
   DataSeries,
   ElementRole,
   Emphasis,
@@ -38,15 +39,22 @@ import {
   readElementColor as readElementColorSvg,
   panelScale,
   redrawAxisFrame,
+  stampAxisEdges as stampAxisEdgesSvg,
   setBackgroundHidden as setBgHiddenSvg,
   applyGradientFill as applyGradientFillSvg,
   setSolidFill as setSolidFillSvg,
   reshapeMarkers as reshapeMarkersSvg,
+  resizeMarkers as resizeMarkersSvg,
   setTickDirection as setTickDirSvg,
+  setTickLength as setTickLengthSvg,
   moveAxisLabel as moveAxisLabelSvg,
+  shiftElements as shiftElementsSvg,
+  shiftEach as shiftEachSvg,
+  setTextPivot as setTextPivotSvg,
+  mergeTextFragments as mergeTextFragmentsSvg,
   setTickVisibility as setTickVisSvg,
-  setAxisLabelGap as setAxisLabelGapSvg,
   type AxisFrameStyle,
+  type AxisEdge,
   type TickDirection,
   type MarkerShape
 } from "./svg/mutate";
@@ -103,6 +111,8 @@ interface DocSnapshot {
   tickVisX: boolean;
   tickVisY: boolean;
   axisLabelGap: number;
+  tickLength: number;
+  tickLabelGap: number;
   innerPad: number;
   layoutLocked: boolean;
   gridCols: number;
@@ -126,6 +136,8 @@ interface AppState {
   tickVisX: boolean;
   tickVisY: boolean;
   axisLabelGap: number;
+  tickLength: number;
+  tickLabelGap: number;
   innerPad: number;
   layoutLocked: boolean;
   gridCols: number;
@@ -184,6 +196,9 @@ interface AppState {
   setTickDirection: (direction: TickDirection) => void;
   setTickVisible: (axis: "x" | "y", visible: boolean) => void;
   setAxisLabelGap: (gap: number) => void;
+  setTickLength: (length: number) => void;
+  setTickLabelGap: (gap: number) => void;
+  centerAxisTitles: () => void;
   setInnerPad: (pad: number) => void;
   applyGrid: (cols: number) => void;
   setLayoutLocked: (locked: boolean) => void;
@@ -223,6 +238,8 @@ function captureDoc(s: AppState): DocSnapshot {
     tickVisX: s.tickVisX,
     tickVisY: s.tickVisY,
     axisLabelGap: s.axisLabelGap,
+    tickLength: s.tickLength,
+    tickLabelGap: s.tickLabelGap,
     innerPad: s.innerPad,
     layoutLocked: s.layoutLocked,
     gridCols: s.gridCols,
@@ -371,8 +388,17 @@ function reparsePanel(p: Panel, newSvg: string): Panel {
  * (drops edge whitespace). Element sizes are preserved; the panel shrinks to fit. */
 function cropPanel(p: Panel, label: PanelLabelStyle): Panel {
   if (p.mode !== "full") return p;
+  // Only VISIBLE ink counts as content. Origin embeds a full-size invisible rect
+  // (visibility:hidden / opacity:0 / fill:none) that would otherwise make the content
+  // span the whole panel, so Trim would find nothing to crop.
+  const paint = (c: string | null) => c != null && c !== "none";
   const els = p.elements.filter(
-    (e) => !e.hidden && e.role !== "background" && (e.bbox.w > 0 || e.bbox.h > 0)
+    (e) =>
+      !e.hidden &&
+      e.role !== "background" &&
+      e.opacity !== 0 &&
+      (paint(e.stroke) || paint(e.fill)) &&
+      (e.bbox.w > 0 || e.bbox.h > 0)
   );
   if (!els.length) return p;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -389,6 +415,181 @@ function cropPanel(p: Panel, label: PanelLabelStyle): Panel {
   const box = { x: x0 - pad, y: y0 - pad - labelM, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 + labelM };
   const out = bakeToCanvasSvg(p.svg, box, p.plot, box.w, box.h);
   return reparsePanel({ ...p, w: box.w, h: box.h, aspect: box.w / box.h }, out.svg);
+}
+
+/**
+ * Center axis titles on the plot axis using their VISUAL bounding boxes (not the
+ * text baseline anchors, which sit off-center). Title fragments are grouped by
+ * orientation (`rotated` = vertical Y title) and side; every fragment in a group
+ * shifts by the same delta, so a split Origin title (with subscripts) centers as
+ * one block and keeps its layout. `onlyScids` limits to the group(s) those scids
+ * belong to (Tune's per-label Center); omit for all titles (the global button).
+ */
+function centerTitles(p: Panel, onlyScids?: string[]): string {
+  const plot = p.plot;
+  const cx = plot.x + plot.w / 2;
+  const cy = plot.y + plot.h / 2;
+  const titles = p.elements.filter((e) => e.role === "text-axis" && (e.bbox.w > 0 || e.bbox.h > 0));
+  if (!titles.length) return p.svg;
+  const buckets = new Map<string, ParsedElement[]>();
+  for (const e of titles) {
+    const ecx = e.bbox.x + e.bbox.w / 2;
+    const ecy = e.bbox.y + e.bbox.h / 2;
+    const key = e.rotated ? (ecx < cx ? "vL" : "vR") : ecy > cy ? "hB" : "hT";
+    const arr = buckets.get(key) ?? [];
+    arr.push(e);
+    buckets.set(key, arr);
+  }
+  let svg = p.svg;
+  for (const [key, els] of buckets) {
+    if (onlyScids && !els.some((e) => onlyScids.includes(e.scid))) continue;
+    const vert = key[0] === "v";
+    const x0 = Math.min(...els.map((e) => e.bbox.x));
+    const x1 = Math.max(...els.map((e) => e.bbox.x + e.bbox.w));
+    const y0 = Math.min(...els.map((e) => e.bbox.y));
+    const y1 = Math.max(...els.map((e) => e.bbox.y + e.bbox.h));
+    const dx = vert ? 0 : cx - (x0 + x1) / 2;
+    const dy = vert ? cy - (y0 + y1) / 2 : 0;
+    if (Math.abs(dx) + Math.abs(dy) > 0.5) svg = shiftElementsSvg(svg, els.map((e) => e.scid), dx, dy);
+  }
+  return svg;
+}
+
+/** Classify each axis line by the plot edge it lies on (with its color), so the
+ * axis-frame toggle can show/hide the original colored edges instead of redrawing
+ * them black. */
+function axisEdges(p: Panel): AxisEdge[] {
+  const { x, y, w, h } = p.plot;
+  const tolX = Math.max(2, w * 0.06);
+  const tolY = Math.max(2, h * 0.06);
+  const out: AxisEdge[] = [];
+  for (const e of p.elements) {
+    if (e.role !== "axis" || (e.bbox.w <= 0 && e.bbox.h <= 0)) continue;
+    const b = e.bbox;
+    let edge: AxisEdge["edge"] = "?";
+    // a single path spanning the whole plot (e.g. a matplotlib box frame) isn't one
+    // edge — leave it "?" so half/full redraw clean sides instead of showing the box.
+    if (b.w > 0.7 * w && b.h > 0.7 * h) {
+      out.push({ scid: e.scid, edge, color: e.stroke });
+      continue;
+    }
+    if (b.h >= b.w) {
+      if (Math.abs(b.x - x) <= tolX) edge = "L";
+      else if (Math.abs(b.x + b.w - (x + w)) <= tolX) edge = "R";
+    } else {
+      if (Math.abs(b.y + b.h - (y + h)) <= tolY) edge = "B";
+      else if (Math.abs(b.y - y) <= tolY) edge = "T";
+    }
+    out.push({ scid: e.scid, edge, color: e.stroke });
+  }
+  return out;
+}
+
+/** Side bucket of an axis-title fragment relative to the plot: vertical (rotated)
+ * left/right, or horizontal bottom/top. */
+function titleSide(e: ParsedElement, plot: BBox): string {
+  const cx = plot.x + plot.w / 2;
+  const cy = plot.y + plot.h / 2;
+  const ecx = e.bbox.x + e.bbox.w / 2;
+  const ecy = e.bbox.y + e.bbox.h / 2;
+  return e.rotated ? (ecx < cx ? "vL" : "vR") : ecy > cy ? "hB" : "hT";
+}
+
+function axisTitleBuckets(p: Panel): Map<string, ParsedElement[]> {
+  const buckets = new Map<string, ParsedElement[]>();
+  for (const e of p.elements) {
+    if (e.role !== "text-axis" || (e.bbox.w <= 0 && e.bbox.h <= 0)) continue;
+    const k = titleSide(e, p.plot);
+    const arr = buckets.get(k) ?? [];
+    arr.push(e);
+    buckets.set(k, arr);
+  }
+  return buckets;
+}
+
+/** Merge each split axis title (Origin subscripts) into one <text> per side. */
+function mergeTitles(p: Panel): string {
+  let svg = p.svg;
+  for (const els of axisTitleBuckets(p).values()) {
+    if (els.length > 1) svg = mergeTextFragmentsSvg(svg, els.map((e) => e.scid));
+  }
+  return svg;
+}
+
+/** Move each axis title so its NEAREST visual edge sits `gap` px from the axis
+ * (a physical distance, independent of font size). A split title shifts as a block. */
+function applyAxisTitleGap(p: Panel, gap: number): string {
+  const { x, y, w, h } = p.plot;
+  const px1 = x, px2 = x + w, py1 = y, py2 = y + h;
+  const moves: { scid: string; dx: number; dy: number }[] = [];
+  for (const [k, els] of axisTitleBuckets(p)) {
+    const x0 = Math.min(...els.map((e) => e.bbox.x));
+    const x1 = Math.max(...els.map((e) => e.bbox.x + e.bbox.w));
+    const y0 = Math.min(...els.map((e) => e.bbox.y));
+    const y1 = Math.max(...els.map((e) => e.bbox.y + e.bbox.h));
+    let dx = 0, dy = 0;
+    if (k === "vL") dx = px1 - gap - x1; // right edge at px1 - gap
+    else if (k === "vR") dx = px2 + gap - x0; // left edge at px2 + gap
+    else if (k === "hB") dy = py2 + gap - y0; // top edge at py2 + gap
+    else dy = py1 - gap - y1; // bottom edge at py1 - gap
+    for (const e of els) moves.push({ scid: e.scid, dx, dy });
+  }
+  return moves.length ? shiftEachSvg(p.svg, moves) : p.svg;
+}
+
+/**
+ * Anchor each tick label to the point that should stay put when the font changes:
+ * X labels (below/above) pivot around their horizontal CENTER and the edge nearest
+ * the axis; Y labels (left/right) pivot around the edge nearest the axis and their
+ * vertical CENTER. Set once at import so font-size changes no longer drift the labels
+ * off their ticks / out of alignment.
+ */
+function normalizeTickAnchors(p: Panel): string {
+  const { x, y, w, h } = p.plot;
+  const cx = x + w / 2, cy = y + h / 2, px1 = x, px2 = x + w, py1 = y, py2 = y + h;
+  const items: { scid: string; anchor: string; baseline: string; x: number; y: number }[] = [];
+  for (const e of p.elements) {
+    if (e.role !== "text-tick" || e.hidden) continue;
+    const b = e.bbox;
+    const ecx = b.x + b.w / 2, ecy = b.y + b.h / 2;
+    const dxOut = Math.max(px1 - ecx, ecx - px2, 0);
+    const dyOut = Math.max(py1 - ecy, ecy - py2, 0);
+    if (dxOut >= dyOut) {
+      // Y-axis label: pivot at the edge facing the axis + vertical center
+      if (ecx < cx) items.push({ scid: e.scid, anchor: "end", baseline: "central", x: b.x + b.w, y: ecy });
+      else items.push({ scid: e.scid, anchor: "start", baseline: "central", x: b.x, y: ecy });
+    } else {
+      // X-axis label: pivot at horizontal center + edge facing the axis
+      if (ecy > cy) items.push({ scid: e.scid, anchor: "middle", baseline: "hanging", x: ecx, y: b.y });
+      else items.push({ scid: e.scid, anchor: "middle", baseline: "text-after-edge", x: ecx, y: b.y + b.h });
+    }
+  }
+  return items.length ? setTextPivotSvg(p.svg, items) : p.svg;
+}
+
+/** Move each tick label so its NEAREST visual edge sits `gap` px from the axis. */
+function applyTickLabelGap(p: Panel, gap: number): string {
+  const { x, y, w, h } = p.plot;
+  const px1 = x, px2 = x + w, py1 = y, py2 = y + h;
+  const cx = x + w / 2, cy = y + h / 2;
+  const moves: { scid: string; dx: number; dy: number }[] = [];
+  for (const e of p.elements) {
+    if (e.role !== "text-tick" || e.hidden) continue;
+    const b = e.bbox;
+    const ecx = b.x + b.w / 2, ecy = b.y + b.h / 2;
+    const dxOut = Math.max(px1 - ecx, ecx - px2, 0);
+    const dyOut = Math.max(py1 - ecy, ecy - py2, 0);
+    let dx = 0, dy = 0;
+    if (dxOut >= dyOut) {
+      if (ecx < cx) dx = px1 - gap - (b.x + b.w); // left axis: right edge at px1 - gap
+      else dx = px2 + gap - b.x; // right axis: left edge at px2 + gap
+    } else {
+      if (ecy > cy) dy = py2 + gap - b.y; // below: top edge at py2 + gap
+      else dy = py1 - gap - (b.y + b.h); // above: bottom edge at py1 - gap
+    }
+    moves.push({ scid: e.scid, dx, dy });
+  }
+  return moves.length ? shiftEachSvg(p.svg, moves) : p.svg;
 }
 
 /**
@@ -426,6 +627,8 @@ export const useStore = create<AppState>((set, get) => ({
   tickVisX: true,
   tickVisY: true,
   axisLabelGap: 28,
+  tickLength: 6,
+  tickLabelGap: 10,
   innerPad: 0,
   layoutLocked: false,
   gridCols: 0,
@@ -490,11 +693,22 @@ export const useStore = create<AppState>((set, get) => ({
       };
       let prepared = panel;
       if (isFull) {
+        // Merge a split Origin axis title (subscripts) into one <text> each, then
+        // normalize tick-label and axis-title distances to a consistent PHYSICAL
+        // gap from the axis (bbox-based) so every imported panel matches.
+        const mergedSvg = mergeTitles(prepared);
+        if (mergedSvg !== prepared.svg) prepared = reparsePanel(prepared, mergedSvg);
+        // anchor tick labels first (so later font changes pivot in place), THEN set
+        // the physical gaps — the gap must be measured against the final baseline.
+        prepared = reparsePanel(prepared, normalizeTickAnchors(prepared));
+        let gapSvg = applyAxisTitleGap(prepared, s.axisLabelGap);
+        gapSvg = applyTickLabelGap({ ...prepared, svg: gapSvg }, s.tickLabelGap);
+        if (gapSvg !== prepared.svg) prepared = reparsePanel(prepared, gapSvg);
+        // stamp each axis line's plot edge (while all are visible) so the frame
+        // toggle can later show/hide the right colored axes.
+        prepared = { ...prepared, svg: stampAxisEdgesSvg(prepared.svg, axisEdges(prepared)) };
         if (s.axisFrame !== "original")
           prepared = { ...prepared, svg: redrawAxisFrame(prepared.svg, prepared.plot, s.axisFrame) };
-        // apply the current global axis-title gap + tick visibility so a freshly
-        // imported panel matches the rest without the user re-toggling anything.
-        prepared = { ...prepared, svg: setAxisLabelGapSvg(prepared.svg, prepared.plot, s.axisLabelGap) };
         if (!s.tickVisX) prepared = { ...prepared, svg: setTickVisSvg(prepared.svg, "x", false) };
         if (!s.tickVisY) prepared = { ...prepared, svg: setTickVisSvg(prepared.svg, "y", false) };
         if (s.bgTransparent) prepared = { ...prepared, svg: setBgHiddenSvg(prepared.svg, true) };
@@ -796,7 +1010,19 @@ export const useStore = create<AppState>((set, get) => ({
 
   unifyTypography: () => {
     get().snapshot();
-    set((s) => ({ panels: s.panels.map((p) => applyTypographyToPanel(p, s.typography)) }));
+    set((s) => ({
+      panels: s.panels.map((p) => {
+        let np = applyTypographyToPanel(p, s.typography);
+        // re-assert the physical label/title distances after the font change (the
+        // anchors keep along-axis centering; gaps restore the perpendicular distance).
+        if (np.mode === "full") {
+          let svg = applyAxisTitleGap(np, s.axisLabelGap);
+          svg = applyTickLabelGap({ ...np, svg }, s.tickLabelGap);
+          if (svg !== np.svg) np = { ...reparsePanel(np, svg), plot: np.plot };
+        }
+        return np;
+      })
+    }));
   },
 
   tuneElement: (panelId, scid, prop, value) => {
@@ -849,10 +1075,12 @@ export const useStore = create<AppState>((set, get) => ({
       panels: s.panels.map((p) => {
         if (p.id !== panelId) return p;
         const src = p.elements.find((e) => e.scid === scid);
+        // resize ONLY the marker elements (so the data line stays intact) and keep
+        // each marker's shape (no conversion to circle).
         const scids = src?.seriesId
-          ? p.elements.filter((e) => e.seriesId === src.seriesId).map((e) => e.scid)
+          ? p.elements.filter((e) => e.seriesId === src.seriesId && (e.hasMarker || e.role === "scatter")).map((e) => e.scid)
           : [scid];
-        return { ...reparsePanel(p, reshapeMarkersSvg(p.svg, scids, null, r)), plot: p.plot };
+        return { ...reparsePanel(p, resizeMarkersSvg(p.svg, scids, r)), plot: p.plot };
       })
     }));
   },
@@ -990,8 +1218,39 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       axisLabelGap: gap,
       panels: s.panels.map((p) =>
-        p.mode !== "full" ? p : { ...reparsePanel(p, setAxisLabelGapSvg(p.svg, p.plot, gap)), plot: p.plot }
+        p.mode !== "full" ? p : { ...reparsePanel(p, applyAxisTitleGap(p, gap)), plot: p.plot }
       )
+    }));
+  },
+
+  setTickLength: (length) => {
+    get().snapshot();
+    set((s) => ({
+      tickLength: length,
+      panels: s.panels.map((p) =>
+        p.mode !== "full" ? p : { ...reparsePanel(p, setTickLengthSvg(p.svg, p.plot, length)), plot: p.plot }
+      )
+    }));
+  },
+
+  setTickLabelGap: (gap) => {
+    get().snapshot();
+    set((s) => ({
+      tickLabelGap: gap,
+      panels: s.panels.map((p) =>
+        p.mode !== "full" ? p : { ...reparsePanel(p, applyTickLabelGap(p, gap)), plot: p.plot }
+      )
+    }));
+  },
+
+  centerAxisTitles: () => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) => {
+        if (p.mode !== "full") return p;
+        const svg = centerTitles(p);
+        return svg === p.svg ? p : { ...reparsePanel(p, svg), plot: p.plot };
+      })
     }));
   },
 
@@ -1054,9 +1313,12 @@ export const useStore = create<AppState>((set, get) => ({
   moveAxisLabel: (panelId, scid, opts) => {
     get().snapshot();
     set((s) => ({
-      panels: s.panels.map((p) =>
-        p.id === panelId ? reparsePanel(p, moveAxisLabelSvg(p.svg, scid, p.plot, opts)) : p
-      )
+      panels: s.panels.map((p) => {
+        if (p.id !== panelId) return p;
+        // Center uses the visual bbox (store-side); nudge is a relative anchor shift.
+        const svg = opts.center ? centerTitles(p, [scid]) : moveAxisLabelSvg(p.svg, scid, p.plot, opts);
+        return svg === p.svg ? p : { ...reparsePanel(p, svg), plot: p.plot };
+      })
     }));
   },
 

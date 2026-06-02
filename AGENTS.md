@@ -113,7 +113,22 @@ node ./node_modules/typescript/bin/tsc --noEmit
   SVG overlays live in a **separate** React subtree. Keep it that way.
 - **Color classification.** Achromatic (black/white/gray) ⇒ structure; saturated
   ⇒ data. Filled **markers/scatter are identified by their fill**, lines by their
-  **stroke** (`seriesColorOf` in `parser.ts`).
+  **stroke** (`seriesColorOf` in `parser.ts`). This breaks on **real Origin
+  exports** (see below), which is why they get a dedicated path.
+- **Origin (OriginLab) exports** are handled specially in `parser.ts`
+  (`isOriginSvg` / `normalizeOriginSvg` / `originRoleFromHint`). Real Origin SVGs:
+  wrap all geometry in a **nested `<svg>`** with a huge viewBox (flattened on
+  import — width/height pinned to the viewBox so `getBBox·getCTM` measures 1:1);
+  **color axes/ticks/labels** to match their data (the blue Y-axis was read as a
+  data series) and use **gray `#808080` as a real data color** (its whole series
+  was dropped to `decoration`) — both fixed by classifying from the
+  `class`/`olab:scope` taxonomy (`…Axis…Line`→axis, `Tick`→tick,
+  `TickLabel`→tick-label, `Title`→axis title, `Plot`→data/scatter) instead of
+  color; draw markers as **`<polygon>`/`<rect>`**; clip data with a **mask**
+  (stripped on import or the bake hides everything); and position rotated titles
+  with `transform="matrix(...)"` + `<tspan x>` (converted to `x/y`+`rotate()`).
+  The hand-written `samples/origin_xrd.svg` is **not** representative — it lacks
+  the `olab` namespace, so it (correctly) uses the generic path.
 - **Recognition ordering.** matplotlib nests ticks under a group named
   `matplotlib.axis_N`; tick detection therefore runs **before** the axis hint,
   and the axis hint deliberately excludes the bare word `axis`. The plot frame is

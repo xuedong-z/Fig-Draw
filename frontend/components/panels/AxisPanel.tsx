@@ -20,6 +20,11 @@ export function AxisPanel() {
   const setTickVisible = useStore((s) => s.setTickVisible);
   const axisLabelGap = useStore((s) => s.axisLabelGap);
   const setAxisLabelGap = useStore((s) => s.setAxisLabelGap);
+  const tickLength = useStore((s) => s.tickLength);
+  const setTickLength = useStore((s) => s.setTickLength);
+  const tickLabelGap = useStore((s) => s.tickLabelGap);
+  const setTickLabelGap = useStore((s) => s.setTickLabelGap);
+  const centerAxisTitles = useStore((s) => s.centerAxisTitles);
   const bgTransparent = useStore((s) => s.bgTransparent);
   const setBackgroundTransparent = useStore((s) => s.setBackgroundTransparent);
 
@@ -71,6 +76,30 @@ export function AxisPanel() {
         </button>
       </div>
 
+      <label className="field-label">Tick length · {tickLength}px</label>
+      <input
+        type="range"
+        min={1}
+        max={16}
+        step={0.5}
+        value={tickLength}
+        onChange={(e) => setTickLength(Number(e.target.value))}
+        className="mb-3 w-full"
+        title="Length of the tick marks (major/minor ratio preserved, all panels)"
+      />
+
+      <label className="field-label">Tick label gap · {tickLabelGap}px</label>
+      <input
+        type="range"
+        min={2}
+        max={48}
+        step={1}
+        value={tickLabelGap}
+        onChange={(e) => setTickLabelGap(Number(e.target.value))}
+        className="mb-3 w-full"
+        title="Distance from tick labels to the axis (all panels)"
+      />
+
       <label className="field-label">Axis title gap · {axisLabelGap}px</label>
       <input
         type="range"
@@ -82,6 +111,14 @@ export function AxisPanel() {
         className="mb-3 w-full"
         title="Distance from axis titles to the axis (all panels)"
       />
+
+      <button
+        className="chip mb-3 w-full justify-center"
+        onClick={() => centerAxisTitles()}
+        title="Center each axis title on its axis (all panels)"
+      >
+        Center axis titles
+      </button>
 
       <button
         className={`chip w-full justify-center ${bgTransparent ? "chip-on" : ""}`}

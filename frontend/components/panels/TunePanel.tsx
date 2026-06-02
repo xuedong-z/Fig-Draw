@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { ROLE_LABELS } from "@/lib/types";
-import { panelScale, PT_TO_FIG, type MarkerShape } from "@/lib/svg/mutate";
+import { panelScale, PT_TO_FIG } from "@/lib/svg/mutate";
 import { findPalette } from "@/lib/palettes";
 
 /** Lighten a hex color toward white by `amt` (0–1) — used to build the light end of a
@@ -26,14 +26,6 @@ const DASHES = [
 
 const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "DejaVu Sans", "Courier New"];
 
-const SHAPES: { v: MarkerShape; label: string }[] = [
-  { v: "circle", label: "● Circle" },
-  { v: "square", label: "■ Square" },
-  { v: "triangle", label: "▲ Triangle" },
-  { v: "diamond", label: "◆ Diamond" },
-  { v: "cross", label: "✕ Cross" }
-];
-
 function asHex(c: string | null): string {
   return c && /^#[0-9a-f]{6}$/i.test(c) ? c : "#000000";
 }
@@ -48,7 +40,6 @@ export function TunePanel() {
   const applyElementStyleToRole = useStore((s) => s.applyElementStyleToRole);
   const moveAxisLabel = useStore((s) => s.moveAxisLabel);
   const setElementText = useStore((s) => s.setElementText);
-  const setMarkerShape = useStore((s) => s.setMarkerShape);
   const setMarkerSize = useStore((s) => s.setMarkerSize);
   const setElementGradient = useStore((s) => s.setElementGradient);
   const activePaletteId = useStore((s) => s.activePaletteId);
@@ -67,7 +58,6 @@ export function TunePanel() {
   const [textVal, setTextVal] = useState("");
   const [fontFam, setFontFam] = useState("Arial");
   const [markerR, setMarkerR] = useState("");
-  const [markerShape, setMarkerShapeState] = useState<MarkerShape>("circle");
 
   useEffect(() => {
     if (!el) return;
@@ -81,7 +71,6 @@ export function TunePanel() {
     setDash(el.strokeDasharray ?? "none");
     setTextVal(el.text ?? "");
     setMarkerR(el.hasMarker ? String(Math.round((el.bbox.w / 2) * 10) / 10) : "");
-    setMarkerShapeState("circle");
     setFontSize(el.fontSizePx != null ? String(Math.round((el.fontSizePx * sc) / PT_TO_FIG * 10) / 10) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedElementId, selectedPanelId]);
@@ -327,21 +316,6 @@ export function TunePanel() {
 
       {el.hasMarker && (
         <>
-          <label className="field-label">Marker shape (whole series)</label>
-          <select
-            className="input-dark mb-3 w-full"
-            value={markerShape}
-            onChange={(e) => {
-              setMarkerShapeState(e.target.value as MarkerShape);
-              setMarkerShape(panel.id, el.scid, e.target.value as MarkerShape);
-            }}
-          >
-            {SHAPES.map((sh) => (
-              <option key={sh.v} value={sh.v}>
-                {sh.label}
-              </option>
-            ))}
-          </select>
           <label className="field-label">Marker size (radius, whole series)</label>
           <input
             type="number"

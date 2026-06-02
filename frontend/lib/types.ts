@@ -86,6 +86,7 @@ export interface ParsedElement {
   text: string | null; // text content for <text>
   fontSizePx: number | null;
   hidden: boolean; // display:none (user-hidden via Tune)
+  rotated: boolean; // has a rotate() transform (vertical axis title / label)
 }
 
 /**

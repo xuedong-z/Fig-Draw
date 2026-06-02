@@ -139,6 +139,65 @@ function openDoc(svg: string): { root: SVGSVGElement; serialize: () => string } 
 const numAttr = (el: Element, name: string) => parseFloat(el.getAttribute(name) ?? "0") || 0;
 
 /**
+ * Read a tick mark's two endpoints regardless of how it's drawn: a `<path>`
+ * `M x y L x y` (matplotlib), a `<polyline>`/`<polygon>` `x,y x,y` (Origin), or a
+ * `<line>`. Returns null if it isn't a readable 2-point segment. Tick direction,
+ * visibility and figsize re-layout all go through this so they work on every
+ * exporter's tick shape.
+ */
+export function readTickSeg(el: Element): { ax: number; ay: number; bx: number; by: number } | null {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "line") {
+    return { ax: numAttr(el, "x1"), ay: numAttr(el, "y1"), bx: numAttr(el, "x2"), by: numAttr(el, "y2") };
+  }
+  const d = el.getAttribute("d");
+  if (d) {
+    const m = d.match(/M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*L\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/i);
+    if (m) return { ax: +m[1], ay: +m[2], bx: +m[3], by: +m[4] };
+  }
+  const pts = el.getAttribute("points");
+  if (pts) {
+    const n = pts.match(/-?\d*\.?\d+(?:[eE][-+]?\d+)?/g);
+    if (n && n.length >= 4) return { ax: +n[0], ay: +n[1], bx: +n[2], by: +n[3] };
+  }
+  return null;
+}
+
+/** Center of a marker shape (for keeping it a constant size on resize). Handles
+ * circle/ellipse, rect, and polygon/polyline (Origin); null for anything else. */
+function markerCenter(el: Element): { cx: number; cy: number } | null {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "circle" || tag === "ellipse") return { cx: numAttr(el, "cx"), cy: numAttr(el, "cy") };
+  if (tag === "rect") return { cx: numAttr(el, "x") + numAttr(el, "width") / 2, cy: numAttr(el, "y") + numAttr(el, "height") / 2 };
+  if (tag === "polygon" || tag === "polyline") {
+    const n = (el.getAttribute("points") ?? "").match(/-?\d*\.?\d+(?:[eE][-+]?\d+)?/g);
+    if (n && n.length >= 4) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i + 1 < n.length; i += 2) {
+        const x = +n[i], y = +n[i + 1];
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+      return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+    }
+  }
+  return null;
+}
+
+/** Write a tick mark's two endpoints back in its own native representation. */
+export function writeTickSeg(el: Element, ax: number, ay: number, bx: number, by: number): void {
+  if (el.tagName.toLowerCase() === "line") {
+    el.setAttribute("x1", String(round(ax)));
+    el.setAttribute("y1", String(round(ay)));
+    el.setAttribute("x2", String(round(bx)));
+    el.setAttribute("y2", String(round(by)));
+  } else if (el.getAttribute("points") != null) {
+    el.setAttribute("points", `${round(ax)},${round(ay)} ${round(bx)},${round(by)}`);
+  } else {
+    el.setAttribute("d", `M${round(ax)} ${round(ay)} L${round(bx)} ${round(by)}`);
+  }
+}
+
+/**
  * Re-lay-out every element from the current `plot` box into a `newPlot` box. Element
  * SIZES (font, stroke, marker radius, tick length) stay constant, only POSITIONS
  * move: data/grid/frame map linearly; markers keep size; ticks keep length with the
@@ -183,6 +242,31 @@ function relayoutElements(root: SVGSVGElement, plot: Box, newPlot: Box): void {
       return;
     }
 
+    // scatter markers (polygon/rect/circle drawn by Origin etc., not yet stamped):
+    // keep size & shape constant — only translate the center with the data, so the
+    // plot stretch never deforms a marker.
+    if (role === "scatter") {
+      const c = markerCenter(el);
+      if (c) {
+        const ddx = mapX(c.cx) - c.cx;
+        const ddy = mapY(c.cy) - c.cy;
+        if (tag === "circle" || tag === "ellipse") {
+          el.setAttribute("cx", String(round(numAttr(el, "cx") + ddx)));
+          el.setAttribute("cy", String(round(numAttr(el, "cy") + ddy)));
+        } else if (tag === "rect") {
+          el.setAttribute("x", String(round(numAttr(el, "x") + ddx)));
+          el.setAttribute("y", String(round(numAttr(el, "y") + ddy)));
+        } else if (tag === "polygon" || tag === "polyline") {
+          const pts = el.getAttribute("points");
+          if (pts) el.setAttribute("points", remapPoints(pts, (x) => x + ddx, (y) => y + ddy));
+        } else {
+          const d = el.getAttribute("d");
+          if (d) el.setAttribute("d", remapPathD(d, (x) => x + ddx, (y) => y + ddy, 1, 1));
+        }
+        return;
+      }
+    }
+
     if (tag === "text") {
       const x = numAttr(el, "x");
       const y = numAttr(el, "y");
@@ -224,12 +308,9 @@ function relayoutElements(root: SVGSVGElement, plot: Box, newPlot: Box): void {
     }
 
     if (role === "tick") {
-      const m = (el.getAttribute("d") ?? "").match(/M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*L\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/i);
-      if (m) {
-        const ax = +m[1];
-        const ay = +m[2];
-        const bx = +m[3];
-        const by = +m[4];
+      const seg = readTickSeg(el);
+      if (seg) {
+        const { ax, ay, bx, by } = seg;
         const tdx = bx - ax;
         const tdy = by - ay;
         // anchor = the end on the axis line (nearer the relevant edge). It follows
@@ -247,7 +328,7 @@ function relayoutElements(root: SVGSVGElement, plot: Box, newPlot: Box): void {
         const fyp = mapY(anchorA ? ay : by);
         const dx = anchorA ? tdx : -tdx;
         const dy = anchorA ? tdy : -tdy;
-        el.setAttribute("d", `M${round(fxp)} ${round(fyp)} L${round(fxp + dx)} ${round(fyp + dy)}`);
+        writeTickSeg(el, fxp, fyp, fxp + dx, fyp + dy);
       }
       return;
     }

@@ -7,8 +7,17 @@
  * separately by the store, so these stay pure string->string transforms.
  */
 import type { DataSeries, Emphasis, TypographySettings } from "../types";
-import { classifyColor, recolorToHue } from "./colorUtils";
+import { classifyColor, parseColor, recolorToHue, toHex } from "./colorUtils";
 import { getStyleValue, setStyleValue, removeStyleValue } from "./styleAccessor";
+import { readTickSeg, writeTickSeg, remapPoints, remapPathD } from "./figsizeRebuild";
+
+/** True if two color strings resolve to the same RGB (e.g. a solid marker whose
+ * fill equals its stroke). Used to recolor a marker's body together with its edge. */
+function sameColor(a: string | null, b: string | null): boolean {
+  const ca = parseColor(a);
+  const cb = parseColor(b);
+  return !!ca && !!cb && toHex(ca) === toHex(cb);
+}
 
 const AUX_GRAY = "#9aa0a6";
 
@@ -70,6 +79,12 @@ function recolorElement(root: Element, el: Element, color: string, preferFill: b
     else setStyleValue(el, "fill", color);
   } else if (hasStroke) {
     setStyleValue(el, "stroke", color);
+    // Solid marker (fill == stroke, e.g. Origin's filled squares): recolor the body
+    // too so it doesn't stay its old color. Open markers (white/none fill) are left
+    // as-is, and gradient fills are untouched here.
+    if (!gradId && fill && fill !== "none" && sameColor(fill, stroke)) {
+      setStyleValue(el, "fill", color);
+    }
   } else if (hasFill) {
     if (gradId) recolorGradient(root, gradId, color);
     else setStyleValue(el, "fill", color);
@@ -263,6 +278,19 @@ function markerGeom(el: Element): { cx: number; cy: number; r: number } | null {
     const w = mnum(el, "width");
     return { cx: mnum(el, "x") + w / 2, cy: mnum(el, "y") + mnum(el, "height") / 2, r: w / 2 || 3 };
   }
+  if (tag === "polygon" || tag === "polyline") {
+    // Origin draws markers as small polygons (e.g. triangles). Center + radius
+    // come from the points' bounding box so they can be reshaped/resized too.
+    const nums = (el.getAttribute("points") ?? "").match(/-?\d*\.?\d+(?:[eE][-+]?\d+)?/g);
+    if (nums && nums.length >= 4) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i + 1 < nums.length; i += 2) {
+        const x = +nums[i], y = +nums[i + 1];
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+      return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, r: Math.max(x1 - x0, y1 - y0) / 2 || 3 };
+    }
+  }
   return null;
 }
 
@@ -323,6 +351,45 @@ export function reshapeMarkers(
   return serialize();
 }
 
+/**
+ * Resize scatter markers IN PLACE around each marker's own center, preserving its
+ * shape (a triangle stays a triangle) and never touching the data line. `r` is the
+ * target half-size in panel coords. Unlike reshapeMarkers this does NOT canonicalize
+ * the shape — so changing size doesn't turn Origin markers into circles, and passing
+ * only marker scids (not the whole series) keeps the line intact.
+ */
+export function resizeMarkers(svg: string, scids: string[], r: number): string {
+  const { root, serialize } = openDoc(svg);
+  for (const scid of scids) {
+    const el = byScid(root, scid);
+    if (!el) continue;
+    const g = markerGeom(el);
+    if (!g || g.r <= 0) continue;
+    const f = r / g.r; // scale factor about the center
+    const tag = el.tagName.toLowerCase();
+    if (tag === "circle") {
+      el.setAttribute("r", String(round(g.r * f)));
+    } else if (tag === "ellipse") {
+      el.setAttribute("rx", String(round(mnum(el, "rx") * f)));
+      el.setAttribute("ry", String(round(mnum(el, "ry") * f)));
+    } else if (tag === "rect") {
+      const w = mnum(el, "width") * f;
+      const h = mnum(el, "height") * f;
+      el.setAttribute("width", String(round(w)));
+      el.setAttribute("height", String(round(h)));
+      el.setAttribute("x", String(round(g.cx - w / 2)));
+      el.setAttribute("y", String(round(g.cy - h / 2)));
+    } else if (tag === "polygon" || tag === "polyline") {
+      const pts = el.getAttribute("points");
+      if (pts) el.setAttribute("points", remapPoints(pts, (x) => g.cx + (x - g.cx) * f, (y) => g.cy + (y - g.cy) * f));
+    } else if (tag === "path") {
+      const d = el.getAttribute("d");
+      if (d) el.setAttribute("d", remapPathD(d, (x) => g.cx + (x - g.cx) * f, (y) => g.cy + (y - g.cy) * f, f, f));
+    }
+  }
+  return serialize();
+}
+
 /** Hide / show one element via display:none (kept in the model, recoverable). */
 export function setElementHidden(svg: string, scid: string, hidden: boolean): string {
   const { root, serialize } = openDoc(svg);
@@ -343,11 +410,30 @@ export function deleteElement(svg: string, scid: string): string {
 
 export type AxisFrameStyle = "original" | "full" | "half" | "none";
 
+/** One side of the plot box an axis line lies on, with the line's own color. The
+ * store computes these from element bboxes (at import, while every axis is visible)
+ * and stamps them with stampAxisEdges so the frame toggle survives hide/show. */
+export interface AxisEdge {
+  scid: string;
+  edge: "L" | "R" | "T" | "B" | "?";
+  color: string | null;
+}
+
+/** Persist each axis line's plot edge as data-scedge so redrawAxisFrame can show/
+ * hide the right ones even after some were hidden (a hidden element has no bbox to
+ * re-classify from). Stamped once at import; the edge is invariant under resize. */
+export function stampAxisEdges(svg: string, edges: AxisEdge[]): string {
+  const { root, serialize } = openDoc(svg);
+  for (const { scid, edge } of edges) byScid(root, scid)?.setAttribute("data-scedge", edge);
+  return serialize();
+}
+
 /**
- * Redraw the axis frame: hide the original axis/spine elements and draw a clean
- * full box / half L (left+bottom) / nothing at the given plot-area box. "original"
- * restores the imported frame. The drawn path carries data-scrole="axis" so the
- * unify step picks up its line width.
+ * Set the axis frame to a full box / half L (left+bottom) / none. Instead of
+ * replacing the imported axes with a black box, we SHOW the original edge lines that
+ * the style calls for (preserving their colors — e.g. Origin's blue/gray dual-Y
+ * axes) and hide the rest; any wanted edge that has no original line is drawn in the
+ * dominant axis color. "original" restores every imported axis.
  */
 export function redrawAxisFrame(
   svg: string,
@@ -356,27 +442,50 @@ export function redrawAxisFrame(
 ): string {
   const { root, serialize } = openDoc(svg);
   root.querySelectorAll("[data-scframe]").forEach((el) => el.remove());
-  const original = Array.from(root.querySelectorAll('[data-scrole="axis"]'));
+  const axisEls = Array.from(root.querySelectorAll('[data-scrole="axis"]'));
   if (style === "original") {
-    original.forEach((el) => removeStyleValue(el, "display"));
+    axisEls.forEach((el) => removeStyleValue(el, "display"));
     return serialize();
   }
-  original.forEach((el) => setStyleValue(el, "display", "none"));
-  if (style === "none") return serialize();
+  if (style === "none") {
+    axisEls.forEach((el) => setStyleValue(el, "display", "none"));
+    return serialize();
+  }
+
+  const want = style === "full" ? ["L", "R", "T", "B"] : ["L", "B"];
+  const present = new Set<string>();
+  const counts = new Map<string, number>();
+  for (const el of axisEls) {
+    const edge = el.getAttribute("data-scedge") ?? "";
+    const col = (getStyleValue(el, "stroke") ?? "").toLowerCase();
+    if (col && col !== "none") counts.set(col, (counts.get(col) ?? 0) + 1);
+    if (edge && want.includes(edge)) {
+      removeStyleValue(el, "display");
+      present.add(edge);
+    } else {
+      setStyleValue(el, "display", "none");
+    }
+  }
+
+  // dominant original-axis color (for any edge we must draw because no line exists)
+  let drawColor = "#000000", best = -1;
+  for (const [c, n] of counts) if (n > best) ((best = n), (drawColor = c));
 
   const { x, y, w, h } = box;
-  const d =
-    style === "full"
-      ? `M${x} ${y} L${x + w} ${y} L${x + w} ${y + h} L${x} ${y + h} Z`
-      : `M${x} ${y} L${x} ${y + h} L${x + w} ${y + h}`;
-  const path = root.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", d);
-  path.setAttribute("data-scframe", "1");
-  path.setAttribute("data-scrole", "axis");
-  // stable id so figsize (which only walks [data-scid]) re-maps this frame on resize
-  path.setAttribute("data-scid", "sc-frame");
-  path.setAttribute("style", "fill:none;stroke:#000000;stroke-width:1;stroke-linejoin:miter");
-  root.appendChild(path);
+  const seg: Record<string, [number, number, number, number]> = {
+    L: [x, y, x, y + h], R: [x + w, y, x + w, y + h], T: [x, y, x + w, y], B: [x, y + h, x + w, y + h]
+  };
+  for (const edge of want) {
+    if (present.has(edge)) continue;
+    const [x1, y1, x2, y2] = seg[edge];
+    const path = root.ownerDocument.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", `M${x1} ${y1} L${x2} ${y2}`);
+    path.setAttribute("data-scframe", "1");
+    path.setAttribute("data-scrole", "axis");
+    path.setAttribute("data-scid", `sc-frame-${edge}`); // stable id so figsize remaps it
+    path.setAttribute("style", `fill:none;stroke:${drawColor};stroke-width:1;stroke-linejoin:miter`);
+    root.appendChild(path);
+  }
   return serialize();
 }
 
@@ -559,11 +668,9 @@ export function setTickDirection(
   const cx = plot.x + plot.w / 2;
   const cy = plot.y + plot.h / 2;
   root.querySelectorAll('[data-scrole="tick"]').forEach((el) => {
-    const d = el.getAttribute("d");
-    if (!d) return;
-    const m = d.match(/M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*L\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/i);
-    if (!m) return;
-    const ax = +m[1], ay = +m[2], bx = +m[3], by = +m[4];
+    const seg = readTickSeg(el); // handles <path>, <polyline> (Origin), <line>
+    if (!seg) return;
+    const { ax, ay, bx, by } = seg;
     const len = Math.hypot(bx - ax, by - ay);
     if (len < 0.5) return;
     // Classify by the tick's OWN orientation, not the anchor position: a corner
@@ -583,13 +690,212 @@ export function setTickDirection(
       if (aD <= bD) { fx = ax; fy = ay; } else { fx = bx; fy = by; }
       nx = fx < cx ? 1 : -1;
     }
-    el.setAttribute("d", `M${fx} ${fy} L${fx + nx * len * sign} ${fy + ny * len * sign}`);
+    writeTickSeg(el, fx, fy, fx + nx * len * sign, fy + ny * len * sign);
   });
   return serialize();
 }
 
+/** Set every tick mark's length to `length` (panel coords), scaling all ticks by
+ * one factor so the major/minor ratio is preserved (the longest tick becomes
+ * `length`). The on-axis anchor and direction are kept. Handles every tick shape. */
+export function setTickLength(
+  svg: string,
+  plot: { x: number; y: number; w: number; h: number },
+  length: number
+): string {
+  const { root, serialize } = openDoc(svg);
+  const ticks = [...root.querySelectorAll('[data-scrole="tick"]')];
+  const segs = ticks.map((el) => ({ el, seg: readTickSeg(el) }));
+  let maxLen = 0;
+  for (const { seg } of segs) if (seg) maxLen = Math.max(maxLen, Math.hypot(seg.bx - seg.ax, seg.by - seg.ay));
+  if (maxLen < 0.01) return serialize();
+  const factor = length / maxLen;
+  for (const { el, seg } of segs) {
+    if (!seg) continue;
+    const { ax, ay, bx, by } = seg;
+    const len = Math.hypot(bx - ax, by - ay);
+    if (len < 0.01) continue;
+    // anchor = the end nearer a plot edge; the free end grows along the tick vector.
+    const vertical = Math.abs(by - ay) >= Math.abs(bx - ax);
+    let fx: number, fy: number, gx: number, gy: number;
+    if (vertical) {
+      const aD = Math.min(Math.abs(ay - plot.y), Math.abs(ay - (plot.y + plot.h)));
+      const bD = Math.min(Math.abs(by - plot.y), Math.abs(by - (plot.y + plot.h)));
+      if (aD <= bD) { fx = ax; fy = ay; gx = bx; gy = by; } else { fx = bx; fy = by; gx = ax; gy = ay; }
+    } else {
+      const aD = Math.min(Math.abs(ax - plot.x), Math.abs(ax - (plot.x + plot.w)));
+      const bD = Math.min(Math.abs(bx - plot.x), Math.abs(bx - (plot.x + plot.w)));
+      if (aD <= bD) { fx = ax; fy = ay; gx = bx; gy = by; } else { fx = bx; fy = by; gx = ax; gy = ay; }
+    }
+    const ux = (gx - fx) / len;
+    const uy = (gy - fy) / len;
+    writeTickSeg(el, fx, fy, fx + ux * len * factor, fy + uy * len * factor);
+  }
+  return serialize();
+}
+
+/** Set the perpendicular distance (panel-px) from each tick LABEL to its axis edge
+ * (global), so labels sit a consistent, adjustable distance from the ticks — useful
+ * after a font-size change pushes them too far. X labels sit below/above (move y);
+ * Y labels sit left/right (move x). The side is inferred from the label position. */
+export function setTickLabelGap(
+  svg: string,
+  plot: { x: number; y: number; w: number; h: number },
+  gap: number
+): string {
+  const { root, serialize } = openDoc(svg);
+  const px1 = plot.x, px2 = plot.x + plot.w, py1 = plot.y, py2 = plot.y + plot.h;
+  root.querySelectorAll('[data-scrole="text-tick"]').forEach((el) => {
+    if (el.tagName.toLowerCase() !== "text") return;
+    const x = parseFloat(el.getAttribute("x") ?? "0");
+    const y = parseFloat(el.getAttribute("y") ?? "0");
+    // classify by which way the label sits further outside the plot (robust to a
+    // label whose other coordinate grazes the plot edge).
+    const dxOut = Math.max(px1 - x, x - px2, 0);
+    const dyOut = Math.max(py1 - y, y - py2, 0);
+    if (dxOut >= dyOut) {
+      // Y-axis label (left/right): fixed horizontal distance to the axis
+      el.setAttribute("x", String(round(x < px1 ? px1 - gap : px2 + gap)));
+    } else {
+      // X-axis label (below/above): fixed vertical distance to the axis
+      el.setAttribute("y", String(round(y > py2 ? py2 + gap : py1 - gap)));
+    }
+  });
+  return serialize();
+}
+
+/** Translate a set of text elements by (dx, dy), keeping each rotate() center in
+ * step. Used for bbox-based axis-title centering (computed in the store, where the
+ * visual bounding boxes live). */
+export function shiftElements(svg: string, scids: string[], dx: number, dy: number): string {
+  return shiftEach(svg, scids.map((scid) => ({ scid, dx, dy })));
+}
+
+/**
+ * Set a text element's anchor + baseline and move x/y to the matching pivot, so a
+ * later font-size change pivots around that point (keeping its alignment to the axis
+ * / tick) instead of drifting. e.g. an X tick label pivots around its horizontal
+ * center + top edge; a left Y tick label around its right edge + vertical center.
+ */
+export function setTextPivot(
+  svg: string,
+  items: { scid: string; anchor: string; baseline: string; x: number; y: number }[]
+): string {
+  const { root, serialize } = openDoc(svg);
+  for (const it of items) {
+    const el = byScid(root, it.scid);
+    if (!el || el.tagName.toLowerCase() !== "text") continue;
+    setStyleValue(el, "text-anchor", it.anchor);
+    setStyleValue(el, "dominant-baseline", it.baseline);
+    el.setAttribute("x", String(round(it.x)));
+    el.setAttribute("y", String(round(it.y)));
+    el.querySelectorAll("tspan").forEach((sp) => sp.removeAttribute("x"));
+  }
+  return serialize();
+}
+
+/** Translate text elements by a PER-ELEMENT (dx, dy), in one pass. Used by the
+ * bbox-based gap controls (each label/title moved by its own visual offset). */
+export function shiftEach(svg: string, moves: { scid: string; dx: number; dy: number }[]): string {
+  const { root, serialize } = openDoc(svg);
+  for (const { scid, dx, dy } of moves) {
+    const el = byScid(root, scid);
+    if (!el || (dx === 0 && dy === 0)) continue;
+    const nx = parseFloat(el.getAttribute("x") ?? "0") + dx;
+    const ny = parseFloat(el.getAttribute("y") ?? "0") + dy;
+    el.setAttribute("x", String(round(nx)));
+    el.setAttribute("y", String(round(ny)));
+    // carry positioned child tspans (a merged multi-part title) along with the text
+    el.querySelectorAll("tspan").forEach((sp) => {
+      const sx = sp.getAttribute("x");
+      if (sx != null) sp.setAttribute("x", String(round(parseFloat(sx) + dx)));
+      const sy = sp.getAttribute("y");
+      if (sy != null) sp.setAttribute("y", String(round(parseFloat(sy) + dy)));
+    });
+    const tf = el.getAttribute("transform");
+    if (tf && /rotate/i.test(tf)) {
+      el.setAttribute("transform", tf.replace(/rotate\(\s*(-?[\d.]+)[^)]*\)/i, `rotate($1 ${round(nx)} ${round(ny)})`));
+    }
+  }
+  return serialize();
+}
+
+/**
+ * Merge several `<text>` fragments — an Origin axis title that the exporter split
+ * into pieces for subscripts ("Width of W", "3", "Te", "4", " (nm)") — into ONE
+ * `<text>` with `<tspan>`s. Each tspan gets an ABSOLUTE x/y computed in the merged
+ * text's local frame (inverse of the shared rotate), so every glyph lands exactly
+ * where it was: rendering is unchanged, but it's now a single editable label. The
+ * first fragment (in reading order) keeps the scid/role; the rest are removed.
+ */
+export function mergeTextFragments(svg: string, scids: string[]): string {
+  if (scids.length < 2) return svg;
+  const { root, serialize } = openDoc(svg);
+  const num = (e: Element, a: string) => parseFloat(e.getAttribute(a) ?? "0") || 0;
+  const els = scids
+    .map((id) => byScid(root, id))
+    .filter((e): e is Element => !!e && e.tagName.toLowerCase() === "text");
+  if (els.length < 2) return svg;
+
+  const angle = parseFloat((els[0].getAttribute("transform") ?? "").match(/rotate\(\s*(-?[\d.]+)/)?.[1] ?? "0") || 0;
+  const fwd = (angle * Math.PI) / 180; // text's own rotate
+  const cF = Math.cos(fwd), sF = Math.sin(fwd);
+  // glyph text comes from the <tspan>s (Origin wraps each piece in one), so the
+  // formatting whitespace between <text> and <tspan> is excluded; intentional
+  // spaces inside a tspan (e.g. " (nm)") are kept.
+  const glyphText = (e: Element) => {
+    const tspans = e.querySelectorAll("tspan");
+    return tspans.length ? Array.from(tspans).map((t) => t.textContent ?? "").join("") : (e.textContent ?? "");
+  };
+  const frags = els
+    .map((e) => ({ e, x: num(e, "x"), y: num(e, "y"), fs: parseFloat(getStyleValue(e, "font-size") ?? "0") || 0, fill: getStyleValue(e, "fill"), text: glyphText(e) }))
+    .sort((p, q) => (p.x * cF + p.y * sF) - (q.x * cF + q.y * sF)); // reading order along the rotated +x axis
+
+  const x0 = frags[0].x, y0 = frags[0].y;
+  const mainFs = Math.max(...frags.map((f) => f.fs)) || 1;
+  // perpendicular screen direction = the text's local +y (descender / subscript side)
+  const perpX = -Math.sin(fwd), perpY = Math.cos(fwd);
+  const bigs = frags.filter((f) => f.fs >= 0.85 * mainFs);
+  const mainPerp = bigs.reduce((s, f) => s + (f.x * perpX + f.y * perpY), 0) / (bigs.length || 1);
+
+  const doc = root.ownerDocument;
+  const NS = "http://www.w3.org/2000/svg";
+  const merged = doc.createElementNS(NS, "text");
+  const first = frags[0].e;
+  for (const a of ["data-scid", "data-scrole", "data-scseries", "font-family", "font-weight", "fill", "style", "class"]) {
+    const v = first.getAttribute(a);
+    if (v != null) merged.setAttribute(a, v);
+  }
+  merged.setAttribute("x", String(round(x0)));
+  merged.setAttribute("y", String(round(y0)));
+  merged.setAttribute("xml:space", "preserve"); // keep intentional spaces (" (nm)")
+  if (angle) merged.setAttribute("transform", `rotate(${round(angle)} ${round(x0)} ${round(y0)})`);
+  // the merged text carries the MAIN font size; normal pieces inherit it and sub/
+  // superscripts use a RELATIVE size, so "unify typography" scales the whole title.
+  setStyleValue(merged, "font-size", `${round(mainFs)}px`);
+  const baseFill = getStyleValue(first, "fill");
+  for (const f of frags) {
+    const tspan = doc.createElementNS(NS, "tspan");
+    if (f.fs < 0.85 * mainFs) {
+      // smaller piece = sub/superscript; flow naturally (no absolute x/y), shift the
+      // baseline and scale relative to the parent so it tracks a font-size change.
+      const onSubSide = f.x * perpX + f.y * perpY >= mainPerp - 1e-6;
+      tspan.setAttribute("baseline-shift", onSubSide ? "sub" : "super");
+      setStyleValue(tspan, "font-size", `${round((f.fs / mainFs) * 100)}%`);
+    }
+    if (f.fill && f.fill !== baseFill) setStyleValue(tspan, "fill", f.fill);
+    tspan.textContent = f.text;
+    merged.appendChild(tspan);
+  }
+  first.parentNode?.replaceChild(merged, first);
+  for (let i = 1; i < frags.length; i++) frags[i].e.remove();
+  return serialize();
+}
+
 /** Reposition an axis-label text: center it on the plot axis and/or nudge its
- * distance from the axis. Handles rotated (y-axis) labels. nudge > 0 = away. */
+ * distance from the axis. Handles rotated (y-axis) labels, and moves all sibling
+ * title fragments on the same side together (Origin splits a title with subscripts
+ * into several <text> boxes) so the whole title centers/slides as one. */
 export function moveAxisLabel(
   svg: string,
   scid: string,
@@ -599,28 +905,45 @@ export function moveAxisLabel(
   const { root, serialize } = openDoc(svg);
   const el = byScid(root, scid);
   if (!el || el.tagName.toLowerCase() !== "text") return serialize();
-  let x = parseFloat(el.getAttribute("x") ?? "0");
-  let y = parseFloat(el.getAttribute("y") ?? "0");
   const cx = plot.x + plot.w / 2;
   const cy = plot.y + plot.h / 2;
   const rotated = /rotate/i.test(el.getAttribute("transform") ?? "");
+  const elX = parseFloat(el.getAttribute("x") ?? "0");
+  const elY = parseFloat(el.getAttribute("y") ?? "0");
+
+  // group = every axis-title fragment on the SAME side as the clicked one.
+  const group = [...root.querySelectorAll('[data-scrole="text-axis"]')].filter((t) => {
+    if (t.tagName.toLowerCase() !== "text") return false;
+    const tRot = /rotate/i.test(t.getAttribute("transform") ?? "");
+    if (tRot !== rotated) return false;
+    const tx = parseFloat(t.getAttribute("x") ?? "0");
+    const ty = parseFloat(t.getAttribute("y") ?? "0");
+    return rotated ? (tx < cx) === (elX < cx) : (ty > cy) === (elY > cy);
+  });
+  const angle = (el.getAttribute("transform") ?? "").match(/rotate\(\s*(-?[\d.]+)/)?.[1] ?? "-90";
+
   if (rotated) {
-    // y-axis label (vertical): center along plot height; distance = x position
-    if (opts.center) y = cy;
-    if (opts.nudge) x -= opts.nudge; // away = further left
-    el.setAttribute("x", String(x));
-    el.setAttribute("y", String(y));
-    el.setAttribute("transform", `rotate(-90 ${x} ${y})`);
-    if (opts.center) setStyleValue(el, "text-anchor", "middle");
-  } else {
-    // x-axis label (horizontal): center along plot width; distance = y position
-    if (opts.center) {
-      x = cx;
-      setStyleValue(el, "text-anchor", "middle");
+    // vertical title: center along plot height (move y), nudge = horizontal distance (x)
+    const ys = group.map((t) => parseFloat(t.getAttribute("y") ?? "0"));
+    const dy = opts.center ? cy - (Math.min(...ys) + Math.max(...ys)) / 2 : 0;
+    for (const t of group) {
+      const nx = (parseFloat(t.getAttribute("x") ?? "0")) - (opts.nudge ?? 0);
+      const ny = (parseFloat(t.getAttribute("y") ?? "0")) + dy;
+      t.setAttribute("x", String(round(nx)));
+      t.setAttribute("y", String(round(ny)));
+      t.setAttribute("transform", `rotate(${angle} ${round(nx)} ${round(ny)})`);
     }
-    if (opts.nudge) y += opts.nudge; // away = further down
-    el.setAttribute("x", String(x));
-    el.setAttribute("y", String(y));
+  } else {
+    // horizontal title: center along plot width (move x), nudge = vertical distance (y)
+    if (group.length <= 1 && opts.center) {
+      el.setAttribute("x", String(round(cx)));
+      setStyleValue(el, "text-anchor", "middle");
+    } else if (opts.center) {
+      const xs = group.map((t) => parseFloat(t.getAttribute("x") ?? "0"));
+      const dx = cx - (Math.min(...xs) + Math.max(...xs)) / 2;
+      for (const t of group) t.setAttribute("x", String(round(parseFloat(t.getAttribute("x") ?? "0") + dx)));
+    }
+    if (opts.nudge) for (const t of group) t.setAttribute("y", String(round(parseFloat(t.getAttribute("y") ?? "0") + opts.nudge)));
   }
   return serialize();
 }
@@ -631,12 +954,9 @@ export function moveAxisLabel(
 export function setTickVisibility(svg: string, axis: "x" | "y", visible: boolean): string {
   const { root, serialize } = openDoc(svg);
   root.querySelectorAll('[data-scrole="tick"]').forEach((el) => {
-    const d = el.getAttribute("d");
-    if (!d) return;
-    const m = d.match(/M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*L\s*(-?[\d.]+)[\s,]+(-?[\d.]+)/i);
-    if (!m) return;
-    const ax = +m[1], ay = +m[2], bx = +m[3], by = +m[4];
-    const isXAxis = Math.abs(by - ay) >= Math.abs(bx - ax); // vertical tick => X axis
+    const seg = readTickSeg(el); // handles <path>, <polyline> (Origin), <line>
+    if (!seg) return;
+    const isXAxis = Math.abs(seg.by - seg.ay) >= Math.abs(seg.bx - seg.ax); // vertical tick => X axis
     if ((axis === "x") !== isXAxis) return;
     if (visible) removeStyleValue(el, "display");
     else setStyleValue(el, "display", "none");
