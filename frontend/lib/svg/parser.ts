@@ -113,26 +113,60 @@ function originHint(node: Element): string {
   return `${cls} ${scope}`.toLowerCase();
 }
 
-/** Role from the Origin taxonomy (null = let the generic classifier decide). */
+/**
+ * Role from Origin's object-model taxonomy (carried in class / olab:scope). The
+ * scope is a path through Origin's documented graph object model —
+ * `Layer.Axis.SubAxis.<part>` for structure, `Layer.Plot<n>` / `…Bar` / `…Symbol`
+ * for data, plus `Legend`, `ColorScale`, `ErrorBar`, etc. The object-type tokens
+ * are shared across chart types, so keying off them classifies a bar / scatter /
+ * legend / error-bar graph by the same rules as a line plot. Returns null only when
+ * there's no usable scope (let the generic classifier decide).
+ */
 function originRoleFromHint(node: Element, tag: string, bbox: BBox, vb: BBox): ElementRole | null {
   const s = originHint(node);
   if (!s.trim()) return null;
   const isText = tag === "text";
-  // order matters: "ticklabel" contains "tick", so it must be tested first.
-  if (/ticklabel/.test(s)) return "text-tick";
-  if (/\btick\b|tick-(?:major|minor)/.test(s)) return isText ? "text-tick" : "tick";
-  if (/\btitle\b/.test(s)) return isText ? "text-axis" : null;
-  if (/legend/.test(s)) return isText ? "text-legend" : "legend";
-  if (/\bgrid\b/.test(s)) return "grid";
-  if (/\bplot\d*\b|\.plot/.test(s)) {
-    if (isText) return "text-legend"; // a data label inside the plot
-    const small = Math.max(bbox.w, bbox.h) < Math.max(vb.w, vb.h) * 0.06;
-    const markerTag = tag === "polygon" || tag === "rect" || tag === "circle" || tag === "ellipse";
-    return markerTag && small ? "scatter" : "data";
+  const has = (re: RegExp) => re.test(s);
+  // a scatter symbol is small in BOTH dimensions; a bar/column is small in only one
+  // (its width) but spans its value in the other — so require both to be small.
+  const vbMax = Math.max(vb.w, vb.h);
+  const small = bbox.w < vbMax * 0.06 && bbox.h < vbMax * 0.06;
+  const markerTag = /^(polygon|rect|circle|ellipse|use|path)$/.test(tag);
+
+  // ---- axis structure (most specific first; "ticklabel" contains "tick") --------
+  if (has(/tick-?labels?/)) return "text-tick"; // numeric OR category tick labels
+  if (has(/\btick\b|(?:major|minor)-?ticks?|ticks?-?(?:major|minor)/)) return isText ? "text-tick" : "tick";
+  if (has(/\btitle\b/)) return isText ? "text-axis" : null; // axis / plot title
+  if (has(/\bgrid\b/)) return "grid"; // grid lines
+  if (has(/legend/)) return isText ? "text-legend" : "legend"; // legend text / swatch
+  if (has(/colou?r-?scale|colou?r-?bar|\bzscale\b|bubble-?scale/)) return isText ? "text-tick" : "decoration";
+  if (has(/\bbreak\b|axis-?break/)) return "axis"; // axis-break marks
+  if (has(/\barrow\b/) && has(/axis/)) return "axis";
+
+  // ---- data objects (Plot / Bar / Column / Area / Symbol / ErrorBar / …) --------
+  if (has(/error|whisker|\bcap\b/)) return "errorbar";
+  if (has(/reference|\bhline\b|\bvline\b/)) return "auxiliary";
+  if (has(/data-?labels?/)) return isText ? "text-legend" : "decoration";
+  if (has(/\bplot\d*\b|\.plot|\bbars?\b|\bcolumns?\b|\barea\b|histogram|\bpie\b|\bbox\b|symbol|scatter|\bcurve\b|\bfit\b|series/)) {
+    if (isText) return "text-legend"; // data / point label sitting in the plot
+    if (has(/\bfit\b/)) return "fit";
+    if (has(/symbol|scatter/) || (markerTag && small)) return "scatter";
+    return "data";
   }
-  if (/\bline\b/.test(s) && /axis/.test(s)) return isText ? "text-axis" : "axis";
-  if (/frame|spine/.test(s)) return "axis";
-  return null;
+
+  // ---- axis line (checked AFTER Plot so a data 'line' isn't grabbed) ------------
+  if (has(/\bline\b|spine|frame|border/) && has(/axis/)) return isText ? "text-axis" : "axis";
+
+  // ---- fallback ----------------------------------------------------------------
+  // Anything still under an axis (but not Title/Tick/Line) is a tick/axis label —
+  // covers category names if a future export tags them oddly.
+  if (has(/axis/)) return isText ? "text-tick" : "axis";
+  // Everything else with a scope is a LAYER-LEVEL object. In real Origin SVG the
+  // legend is scoped bare "Layer{N}" (box polylines + colored swatch polygons +
+  // entry text), as are free annotations. Treat it as legend so the colored
+  // swatches never inflate the data-series count and instead recolor with their
+  // series (pairLegends matches role "legend"/"text-legend" by color/proximity).
+  return isText ? "text-legend" : "legend";
 }
 
 /**
@@ -155,16 +189,21 @@ function normalizeOriginSvg(svg: SVGSVGElement): void {
       inner.getAttribute("viewBox") ||
       `0 0 ${inner.getAttribute("width") || 0} ${inner.getAttribute("height") || 0}`;
     svg.setAttribute("viewBox", innerVB);
-    // Pin width/height to the viewBox so geometry measures 1:1 (getBBox·getCTM
-    // scales by width/viewBox; the outer width was in inches, ~6x off). The final
-    // panel size is set by the import-time bake — these are only for measurement.
-    const [, , vw, vh] = innerVB.split(/[\s,]+/).map(Number);
+    while (inner.firstChild) svg.insertBefore(inner.firstChild, inner);
+    inner.remove();
+  }
+
+  // Pin width/height to the viewBox so geometry measures 1:1 (getBBox·getCTM scales
+  // by width/viewBox; Origin's root width/height are in inches, ~6x off — true for
+  // BOTH nested and non-nested exports). The final panel size is set by the bake;
+  // this is only for measurement and the per-layer viewBoxes of multi-layer splits.
+  const vbAttr = svg.getAttribute("viewBox");
+  if (vbAttr) {
+    const [, , vw, vh] = vbAttr.split(/[\s,]+/).map(Number);
     if (Number.isFinite(vw) && Number.isFinite(vh) && vw > 0 && vh > 0) {
       svg.setAttribute("width", String(vw));
       svg.setAttribute("height", String(vh));
     }
-    while (inner.firstChild) svg.insertBefore(inner.firstChild, inner);
-    inner.remove();
   }
 
   svg.querySelectorAll("[mask]").forEach((el) => el.removeAttribute("mask"));
@@ -269,11 +308,12 @@ function colorKey(el: ParsedElement): string {
 
 /** Group key for series aggregation: prefer a meaningful ancestor id. */
 function groupKeyOf(node: Element, el: ParsedElement): string {
-  // Origin: group by Layer+Plot so each dataset is its own series regardless of
-  // color (two same-colored datasets must not merge; a line and its markers must).
+  // Origin: group by Layer + data-object (Plot/Bar/Column/Area) so each dataset is
+  // its own series regardless of color (two same-colored datasets must not merge;
+  // a line and its markers must).
   const oh = originHint(node);
   const layer = oh.match(/layer(\d+)/);
-  const plot = oh.match(/plot(\d+)/);
+  const plot = oh.match(/(?:plot|bars?|columns?|area)(\d+)/);
   if (layer && plot) return `g:origin:l${layer[1]}p${plot[1]}`;
 
   let p: Element | null = node;
@@ -456,6 +496,93 @@ export function parseSvgString(raw: string, sourceName = "figure"): ParseResult 
 
     const outSvg = new XMLSerializer().serializeToString(liveSvg);
     return { svg: outSvg, vb, elements, series, textToPath, mode, warnings };
+  } finally {
+    document.body.removeChild(mount);
+  }
+}
+
+/**
+ * If `raw` is a multi-LAYER Origin graph whose layers occupy DISJOINT regions
+ * (tiled / stacked panels — NOT an overlaid double-Y like Graph3), split it into one
+ * self-contained SVG string per layer (so each becomes its own SciCompose panel,
+ * which is exactly the compose-from-sub-figures model). Returns null for a single
+ * region or overlaid layers (import as one panel). Browser-only (uses getBBox).
+ *
+ * Origin encodes layering purely in the `olab:scope` prefix (`Layer{N}.…`), not via
+ * DOM containers, so we partition elements by that prefix and crop each panel's
+ * viewBox to its layer's bounding box.
+ */
+export function splitTiledOriginLayers(raw: string): string[] | null {
+  if (!isOriginSvg(raw)) return null;
+  const doc = new DOMParser().parseFromString(raw, "image/svg+xml");
+  const svg = doc.documentElement as unknown as SVGSVGElement;
+  if (!svg || svg.tagName.toLowerCase() !== "svg" || doc.querySelector("parsererror")) return null;
+  normalizeOriginSvg(svg);
+  ensureRenderable(svg);
+
+  const layerOf = (el: Element): number | null => {
+    const m = originHint(el).match(/layer(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
+  };
+
+  const mount = document.createElement("div");
+  mount.setAttribute("style", "position:fixed;left:-99999px;top:-99999px;width:10px;height:10px;overflow:hidden;opacity:0;pointer-events:none;");
+  const live = document.importNode(svg, true) as SVGSVGElement;
+  mount.appendChild(live);
+  document.body.appendChild(mount);
+  try {
+    const boxes = new Map<number, BBox>();
+    for (const node of Array.from(live.querySelectorAll("*"))) {
+      if (!DRAWABLE.has(node.tagName.toLowerCase()) || inSkippedAncestor(node)) continue;
+      const L = layerOf(node);
+      if (L == null) continue;
+      const b = rootBBox(node as unknown as SVGGraphicsElement);
+      if (b.w <= 0 && b.h <= 0) continue;
+      const cur = boxes.get(L);
+      if (!cur) boxes.set(L, { ...b });
+      else {
+        const x = Math.min(cur.x, b.x);
+        const y = Math.min(cur.y, b.y);
+        boxes.set(L, { x, y, w: Math.max(cur.x + cur.w, b.x + b.w) - x, h: Math.max(cur.y + cur.h, b.y + b.h) - y });
+      }
+    }
+    const layers = [...boxes.keys()].sort((a, b) => a - b);
+    if (layers.length < 2) return null;
+    // tiled ONLY if no two layers meaningfully overlap (an overlaid double-Y shares
+    // one plot region and must stay a single panel).
+    let maxOverlap = 0;
+    for (let i = 0; i < layers.length; i++) {
+      for (let j = i + 1; j < layers.length; j++) {
+        const a = boxes.get(layers[i])!;
+        const b = boxes.get(layers[j])!;
+        const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+        const iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+        maxOverlap = Math.max(maxOverlap, (ix * iy) / Math.max(1, Math.min(a.w * a.h, b.w * b.h)));
+      }
+    }
+    if (maxOverlap > 0.25) return null;
+
+    const out: string[] = [];
+    for (const L of layers) {
+      const clone = svg.cloneNode(true) as SVGSVGElement;
+      for (const node of Array.from(clone.querySelectorAll("*"))) {
+        if (!DRAWABLE.has(node.tagName.toLowerCase()) || inSkippedAncestor(node)) continue;
+        const m = originHint(node).match(/layer(\d+)/);
+        if (!m || parseInt(m[1], 10) !== L) node.remove();
+      }
+      const bb = boxes.get(L)!;
+      const pad = Math.max(2, Math.max(bb.w, bb.h) * 0.02);
+      const x = bb.x - pad;
+      const y = bb.y - pad;
+      const w = bb.w + 2 * pad;
+      const h = bb.h + 2 * pad;
+      clone.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
+      clone.setAttribute("width", String(w));
+      clone.setAttribute("height", String(h));
+      clone.setAttribute("preserveAspectRatio", "none");
+      out.push(new XMLSerializer().serializeToString(clone));
+    }
+    return out;
   } finally {
     document.body.removeChild(mount);
   }

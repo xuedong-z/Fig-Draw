@@ -19,7 +19,7 @@ import type {
   PanelLabelStyle,
   TypographySettings
 } from "./types";
-import { parseSvgString, aggregateSeries } from "./svg/parser";
+import { parseSvgString, aggregateSeries, splitTiledOriginLayers } from "./svg/parser";
 import {
   bakeToCanvas as bakeToCanvasSvg,
   rebuildFigsize as rebuildFigsizeSvg,
@@ -647,6 +647,18 @@ export const useStore = create<AppState>((set, get) => ({
   future: [],
 
   importSvg: (name, raw) => {
+    // A multi-layer (tiled/stacked) Origin graph is really several sub-figures in one
+    // file — split it into one panel per layer (each imported normally below).
+    try {
+      const parts = splitTiledOriginLayers(raw);
+      if (parts && parts.length > 1) {
+        const base = name.replace(/\.svg$/i, "");
+        parts.forEach((sub, i) => get().importSvg(`${base} (${i + 1}).svg`, sub));
+        return;
+      }
+    } catch {
+      /* fall back to single-panel import */
+    }
     let result;
     try {
       result = parseSvgString(raw, name);

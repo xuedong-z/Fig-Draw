@@ -115,8 +115,11 @@ node ./node_modules/typescript/bin/tsc --noEmit
   ⇒ data. Filled **markers/scatter are identified by their fill**, lines by their
   **stroke** (`seriesColorOf` in `parser.ts`). This breaks on **real Origin
   exports** (see below), which is why they get a dedicated path.
-- **Origin (OriginLab) exports** are handled specially in `parser.ts`
-  (`isOriginSvg` / `normalizeOriginSvg` / `originRoleFromHint`). Real Origin SVGs:
+- **Origin (OriginLab) exports** — full reverse-engineered rule reference in
+  [`ORIGIN-SVG.md`](ORIGIN-SVG.md) (the `olab:scope` vocabulary, data sub-typing,
+  legend, multi-layer split, and Origin export limitations). Handled in `parser.ts`
+  (`isOriginSvg` / `normalizeOriginSvg` / `originRoleFromHint` / `splitTiledOriginLayers`).
+  Real Origin SVGs:
   wrap all geometry in a **nested `<svg>`** with a huge viewBox (flattened on
   import — width/height pinned to the viewBox so `getBBox·getCTM` measures 1:1);
   **color axes/ticks/labels** to match their data (the blue Y-axis was read as a
