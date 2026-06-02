@@ -125,6 +125,9 @@ function originHint(node: Element): string {
 function originRoleFromHint(node: Element, tag: string, bbox: BBox, vb: BBox): ElementRole | null {
   const s = originHint(node);
   if (!s.trim()) return null;
+  // an inserted bitmap (micrograph, logo) -> let the generic/bitmap path handle it
+  // (it may flip the panel to layout-only); never fold it into the legend bucket.
+  if (tag === "image") return null;
   const isText = tag === "text";
   const has = (re: RegExp) => re.test(s);
   // a scatter symbol is small in BOTH dimensions; a bar/column is small in only one

@@ -76,11 +76,43 @@ containers. Each layer is a **complete, independent plot region** (its own
 - **Overlaid double-Y** (layers share one region, e.g. blue/gray dual axes): kept as a
   **single panel**. Detected by bounding-box overlap (>25% ⇒ overlaid).
 
+## Non-axis / non-data elements (tested via COM-generated graphs)
+
+Every element that is neither an axis part nor a data plot resolves to exactly one of
+two buckets — bare `Layer{N}` or `Plot{N}` — so nothing is dropped or breaks; the only
+imperfection is semantic bucketing.
+
+| Element | Scope | Role / behavior |
+| --- | --- | --- |
+| Legend (frame + swatches + text) | bare `Layer{N}` | legend / text-legend; swatches recolor with their series |
+| Free **text annotation** | bare `Layer{N}` | text-legend — renders, movable, editable |
+| **Fit parameter label** (`y=a+bx, R²`) | bare `Layer{N}` | text-legend |
+| **Data labels** (values on points/bars) | bare `Layer{N}` | text-legend |
+| **Drawn shapes** (arrow / line / rect / circle) | bare `Layer{N}` | legend (decoration) — renders, not recolored as data |
+| **Bubble scale** | bare `Layer{N}` | legend |
+| **Fit curve** | `Plot{N}` | data — becomes its own series (recolorable independently) |
+| **Reference line**, bubble markers | `Plot{N}` | data |
+| **Inserted image** (`<image>`) | bare `Layer{N}` | routed to generic/bitmap handling (NOT legend); a large image flips the panel to layout-only |
+| **Inset graph** (a small overlapping layer) | own `Layer{N}` | kept in ONE panel (overlap > 25% ⇒ not split); its axes can slightly confuse the single plot-box |
+
 ## Known Origin export limitations (not recognizer bugs)
 - **Grid lines are not exported** to SVG (no grid geometry, no `Grid` token) — must be
   synthesized from tick positions if needed.
 - **Box plots, stacked columns, error-bar whiskers** export **without their data
   glyphs** — the SVG contains only axes/labels/legend. These types don't round-trip.
+- **Contour / heatmap / image plots** export **without their color fields** (only a
+  couple of stray `Plot` elements, no color bands) — colors don't round-trip.
+- **Inserted bitmap images** appear not to be emitted to SVG by Origin's exporter
+  (an insert produced no `<image>`); mixed micrograph+plot figures may need the raster
+  added separately.
+- **Confidence / prediction bands** weren't exported by the script fits tested; if a
+  band IS present it is a filled `Plot{N}` (role data) and recoloring that series would
+  alter it — flag/verify if you rely on banded fits.
 - **Log axes**: tick labels are decades (`1E-8 … 1000`) and the pixel position is
   linear in `log10(value)`, not in `value`. Pixel-based features (recolor, figsize,
   trim) still work; any value↔pixel calibration must fit in log space.
+- **3D / polar / ternary / pie** charts are not handled (different geometry; pie data
+  isn't exported either).
+
+These were established by generating ~30 chart/element types headlessly through
+Origin 2025's COM automation server and inspecting the real SVG output.
