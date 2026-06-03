@@ -116,3 +116,52 @@ imperfection is semantic bucketing.
 
 These were established by generating ~30 chart/element types headlessly through
 Origin 2025's COM automation server and inspecting the real SVG output.
+
+## Borrowing from liborigin's object model (design reference)
+
+[liborigin](https://github.com/SciDAVis/liborigin) (GPL-3.0, C++) is the only mature
+open-source Origin parser. It reads the binary `.opj` — NOT the SVG export — so none of its
+code is usable here (and it's GPL, we're MIT). But its **object model is a battle-tested map
+of what an Origin graph contains**, worth mirroring *conceptually* (model shape only, no
+code copied).
+
+**liborigin's hierarchy** (`OriginObj.h`): `Graph → GraphLayer → { Axes (scale type,
+major/minor ticks, major/minor grid, break, tick valueType) · Curves (each with a Plot type
++ line/symbol/fill style) · Annotations (texts · lines-with-arrowheads · figures rect/circle
+· bitmaps) · Legend (a TextBox) · ColorScale + ColorMap } }`. Two orthogonal axes: a strict
+containment tree, plus reusable style enums (Color, FillPattern, lineStyle, symbolShape, and
+**`Attach` = Frame | Page | Scale** — whether an object is pinned to data coords or the page).
+
+**Where we stand.** Our `olab:scope` taxonomy already nails the **containment tree**
+(Page→Layer→Axis/SubAxis/Plot ≈ 1:1; layer-splitting matches "layer = independent region").
+What we flatten is the **leaf taxonomy**: two catch-all buckets — bare `Layer{N}` and
+`Plot{N}` — absorb everything liborigin keeps distinct (every annotation kind → one bucket;
+~30 plot types → 2–3 geometric buckets). Design move (no GPL code, just the model's shape):
+keep the scope-based containment, layer a "kind" classifier on top of the two buckets.
+
+### Done
+- **Legend vs decoration split** (`refineOriginLegendRoles`, parser.ts). A real Origin
+  legend swatch's color is byte-identical to a data series; a decorative arrow/box/line is
+  not. After series aggregation, a `legend` element matching no series color is demoted to
+  `decoration` (not recolored, not counted as legend). Conservative — real swatches
+  untouched. Mirrors liborigin's Legend-vs-Line/Figure split.
+
+### Roadmap — reachable in the SVG export (worth doing)
+- **Annotation roles.** Split the bare-`Layer{N}` bucket the way liborigin separates Legend
+  · free text · Line(arrow) · Figure(rect/circle): distinguishable from the SVG by tag +
+  geometry (text vs polyline-with-arrowhead vs polygon/rect vs circle).
+- **Named plot types.** Aim the geometric classifier at liborigin's named set: column vs bar
+  (vertical/horizontal baseline anchor), area vs line (closed filled polygon vs open
+  polyline), error-bar (paired perpendicular caps).
+- **Numeric vs categorical tick labels.** liborigin's `valueType`; infer by whether the
+  `TickLabel-Major` strings parse as numbers → continuous vs categorical axis.
+- **`Attach` mental model.** Frame/Page/Scale explains which elements should move/scale with
+  the plot vs stay fixed — infer from position; informs move/recolor behavior.
+
+### Roadmap — NOT reachable (Origin omits from SVG; document, don't chase)
+- major vs minor **grid** (no geometry exported), **axis break** (no `Break` token),
+  **ColorScale/ColorMap** colorbar (color fields don't round-trip), box/contour glyphs.
+  Reserve named placeholder roles for the day an exporter emits them.
+
+Object-model source: liborigin `OriginObj.h` / `OriginParser.h`
+(github.com/SciDAVis/liborigin) — read for the schema only; GPL-3.0, do not copy code.
