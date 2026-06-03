@@ -173,6 +173,29 @@ function originRoleFromHint(node: Element, tag: string, bbox: BBox, vb: BBox): E
 }
 
 /**
+ * liborigin-informed refinement. In Origin's SVG the legend, free-text annotations,
+ * arrows and drawn shapes ALL sit under a bare `Layer{N}` scope, so originRoleFromHint
+ * can only provisionally call every non-text bare-Layer shape a legend swatch. But a
+ * REAL legend swatch's fill/stroke is byte-identical to a data series (see ORIGIN-SVG.md);
+ * a decorative arrow / box / line is not. Once series are aggregated we can tell them
+ * apart: a "legend" element whose color matches no series is a decoration — leave it
+ * alone (don't recolor it or count it as legend), not a swatch. Mirrors liborigin's clean
+ * split of Legend vs Line/Figure annotations, but stays rule-based off the received SVG.
+ * Conservative: real swatches (color == series) are untouched; pure model edit, caller
+ * rewrites data-scrole after.
+ */
+function refineOriginLegendRoles(elements: ParsedElement[], series: DataSeries[]): void {
+  if (!series.length) return;
+  const seriesColors = new Set(series.map((s) => s.color));
+  for (const e of elements) {
+    if (e.role !== "legend") continue;
+    const c = parseColor(seriesColorOf(e));
+    const hex = c ? toHex(c) : null;
+    if (!hex || !seriesColors.has(hex)) e.role = "decoration";
+  }
+}
+
+/**
  * Normalize an Origin export into a flat, single-coordinate-space SVG so the bake
  * / figsize / recolor pipeline (which assumes one coordinate system, like a
  * matplotlib export) works:
@@ -493,6 +516,14 @@ export function parseSvgString(raw: string, sourceName = "figure"): ParseResult 
       for (const id of s.elementIds) {
         nodeByScid.get(id)?.setAttribute("data-scseries", s.id);
       }
+    }
+
+    // liborigin-informed: a bare-Layer "legend" shape whose color matches no series is a
+    // decorative annotation (arrow / box / line), not a swatch — demote it so it isn't
+    // recolored or counted as legend. Rewrite data-scrole for any role we changed.
+    if (origin) {
+      refineOriginLegendRoles(elements, series);
+      for (const e of elements) nodeByScid.get(e.scid)?.setAttribute("data-scrole", e.role);
     }
 
     pairLegends(series, elements);
