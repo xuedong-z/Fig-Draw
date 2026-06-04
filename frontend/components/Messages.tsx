@@ -2,11 +2,13 @@
 
 import { X, AlertTriangle, Info } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 
 /** Floating import warnings / info toasts (Module: import detection feedback). */
 export function Messages() {
   const messages = useStore((s) => s.importMessages);
   const dismiss = useStore((s) => s.dismissMessage);
+  const t = useT();
   if (messages.length === 0) return null;
 
   return (
@@ -25,7 +27,7 @@ export function Messages() {
           ) : (
             <Info size={14} className="mt-px shrink-0 text-accent" />
           )}
-          <span className="flex-1 leading-snug">{m.text}</span>
+          <span className="flex-1 leading-snug">{m.i18n ? t(m.i18n.key, m.i18n.vars) : m.text}</span>
           <button onClick={() => dismiss(m.id)} className="shrink-0 text-faint hover:text-ink">
             <X size={13} />
           </button>

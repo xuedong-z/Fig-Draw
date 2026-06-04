@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Canvas, Rect, Line } from "fabric";
 import { useStore, FIG_PX_PER_MM } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { Panel, PanelLabelStyle } from "@/lib/types";
 import { EXAMPLES, loadExample } from "@/lib/examples";
 
@@ -59,6 +60,7 @@ function labelPosStyle(pos: PanelLabelStyle["position"], off: number): { left?: 
 }
 
 export function FigureCanvas() {
+  const t = useT();
   const panels = useStore((s) => s.panels);
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const selectedPanelId = useStore((s) => s.selectedPanelId);
@@ -407,9 +409,9 @@ export function FigureCanvas() {
       {panels.length === 0 && (
         <div className="pointer-events-none absolute inset-3 z-[5] grid place-items-center rounded-lg border border-dashed border-line">
           <div className="text-center">
-            <div className="text-sm font-medium text-muted">Import an SVG to begin</div>
+            <div className="text-sm font-medium text-muted">{t("canvas.importBegin")}</div>
             <div className="mt-1 text-2xs text-faint">
-              Import your exported sub-figures, or try an example:
+              {t("canvas.importHint")}
             </div>
             <div className="pointer-events-auto mt-2 flex flex-wrap justify-center gap-1.5">
               {EXAMPLES.map((ex) => (

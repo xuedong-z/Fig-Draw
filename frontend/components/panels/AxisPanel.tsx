@@ -2,15 +2,17 @@
 
 import { Eraser } from "lucide-react";
 import { useStore, type AxisFrameStyle } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 
-const FRAMES: { v: AxisFrameStyle; label: string; title: string }[] = [
-  { v: "original", label: "Orig", title: "Keep the imported frame" },
-  { v: "full", label: "Full", title: "Redraw a full box frame" },
-  { v: "half", label: "Half", title: "Redraw a half (L) frame: left + bottom" },
-  { v: "none", label: "None", title: "Hide the frame" }
+const FRAMES: { v: AxisFrameStyle; tkey: string; tipKey: string }[] = [
+  { v: "original", tkey: "frame.original", tipKey: "tip.frame.original" },
+  { v: "full", tkey: "frame.full", tipKey: "tip.frame.full" },
+  { v: "half", tkey: "frame.half", tipKey: "tip.frame.half" },
+  { v: "none", tkey: "frame.none", tipKey: "tip.frame.none" }
 ];
 
 export function AxisPanel() {
+  const t = useT();
   const panelCount = useStore((s) => s.panels.length);
   const axisFrame = useStore((s) => s.axisFrame);
   const setAxisFrame = useStore((s) => s.setAxisFrame);
@@ -28,55 +30,55 @@ export function AxisPanel() {
   const bgTransparent = useStore((s) => s.bgTransparent);
   const setBackgroundTransparent = useStore((s) => s.setBackgroundTransparent);
 
-  if (!panelCount) return <div className="p-3 text-2xs text-faint">Import an SVG to edit axes.</div>;
+  if (!panelCount) return <div className="p-3 text-2xs text-faint">{t("axis.importHint")}</div>;
 
   return (
     <div className="p-3">
-      <div className="panel-title mb-2">Axes · all panels</div>
+      <div className="panel-title mb-2">{t("axis.title")}</div>
 
-      <label className="field-label">Axis frame</label>
+      <label className="field-label">{t("axis.frame")}</label>
       <div className="mb-3 grid grid-cols-4 gap-1">
         {FRAMES.map((f) => (
           <button
             key={f.v}
-            title={f.title}
+            title={t(f.tipKey)}
             onClick={() => setAxisFrame(f.v)}
             className={`chip justify-center ${axisFrame === f.v ? "chip-on" : ""}`}
           >
-            {f.label}
+            {t(f.tkey)}
           </button>
         ))}
       </div>
 
-      <label className="field-label">Tick direction</label>
+      <label className="field-label">{t("axis.tickDir")}</label>
       <div className="mb-3 grid grid-cols-2 gap-1">
-        <button className="chip justify-center" onClick={() => setTickDirection("in")} title="Ticks point inward">
-          Inward
+        <button className="chip justify-center" onClick={() => setTickDirection("in")} title={t("tip.tickDirIn")}>
+          {t("act.inward")}
         </button>
-        <button className="chip justify-center" onClick={() => setTickDirection("out")} title="Ticks point outward">
-          Outward
+        <button className="chip justify-center" onClick={() => setTickDirection("out")} title={t("tip.tickDirOut")}>
+          {t("act.outward")}
         </button>
       </div>
 
-      <label className="field-label">Tick marks</label>
+      <label className="field-label">{t("axis.tickMarks")}</label>
       <div className="mb-3 grid grid-cols-2 gap-1">
         <button
           className={`chip justify-center ${tickVisX ? "chip-on" : ""}`}
           onClick={() => setTickVisible("x", !tickVisX)}
-          title="Show / hide X-axis tick marks (all panels)"
+          title={t("tip.xticks")}
         >
-          X ticks
+          {t("axis.xticks")}
         </button>
         <button
           className={`chip justify-center ${tickVisY ? "chip-on" : ""}`}
           onClick={() => setTickVisible("y", !tickVisY)}
-          title="Show / hide Y-axis tick marks (all panels)"
+          title={t("tip.yticks")}
         >
-          Y ticks
+          {t("axis.yticks")}
         </button>
       </div>
 
-      <label className="field-label">Tick length · {tickLength}px</label>
+      <label className="field-label">{t("axis.tickLen")} · {tickLength}px</label>
       <input
         type="range"
         min={1}
@@ -85,10 +87,10 @@ export function AxisPanel() {
         value={tickLength}
         onChange={(e) => setTickLength(Number(e.target.value))}
         className="mb-3 w-full"
-        title="Length of the tick marks (major/minor ratio preserved, all panels)"
+        title={t("tip.tickLen")}
       />
 
-      <label className="field-label">Tick label gap · {tickLabelGap}px</label>
+      <label className="field-label">{t("axis.tickLabelGap")} · {tickLabelGap}px</label>
       <input
         type="range"
         min={2}
@@ -97,10 +99,10 @@ export function AxisPanel() {
         value={tickLabelGap}
         onChange={(e) => setTickLabelGap(Number(e.target.value))}
         className="mb-3 w-full"
-        title="Distance from tick labels to the axis (all panels)"
+        title={t("tip.tickLabelGap")}
       />
 
-      <label className="field-label">Axis title gap · {axisLabelGap}px</label>
+      <label className="field-label">{t("axis.titleGap")} · {axisLabelGap}px</label>
       <input
         type="range"
         min={4}
@@ -109,23 +111,23 @@ export function AxisPanel() {
         value={axisLabelGap}
         onChange={(e) => setAxisLabelGap(Number(e.target.value))}
         className="mb-3 w-full"
-        title="Distance from axis titles to the axis (all panels)"
+        title={t("tip.titleGap")}
       />
 
       <button
         className="chip mb-3 w-full justify-center"
         onClick={() => centerAxisTitles()}
-        title="Center each axis title on its axis (all panels)"
+        title={t("tip.centerTitles")}
       >
-        Center axis titles
+        {t("axis.centerTitles")}
       </button>
 
       <button
         className={`chip w-full justify-center ${bgTransparent ? "chip-on" : ""}`}
         onClick={() => setBackgroundTransparent(!bgTransparent)}
-        title="Remove figure backgrounds (make transparent)"
+        title={t("tip.transparentBg")}
       >
-        <Eraser size={13} /> Transparent background
+        <Eraser size={13} /> {t("axis.transparentBg")}
       </button>
     </div>
   );

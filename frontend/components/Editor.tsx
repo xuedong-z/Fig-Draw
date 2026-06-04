@@ -11,6 +11,19 @@ import { Messages } from "./Messages";
 export function Editor() {
   const undo = useStore((s) => s.undo);
   const redo = useStore((s) => s.redo);
+  const setLang = useStore((s) => s.setLang);
+
+  // i18n — restore the saved UI language on the client (done in an effect, not in
+  // the store initializer, so the SSR/first-paint markup matches and React doesn't
+  // throw a hydration mismatch).
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("sc-lang");
+      if (saved === "zh" || saved === "en") setLang(saved);
+    } catch {
+      /* storage blocked — keep default */
+    }
+  }, [setLang]);
 
   // Module I — Ctrl+Z / Ctrl+Shift+Z
   useEffect(() => {

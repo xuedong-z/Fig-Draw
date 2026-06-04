@@ -1,16 +1,18 @@
 "use client";
 
 import { useStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { Emphasis } from "@/lib/types";
 
-const LEVELS: { id: Emphasis; label: string; hint: string }[] = [
-  { id: "primary", label: "Primary", hint: "Spotlight — bolder, on top" },
-  { id: "secondary", label: "Secondary", hint: "Supporting — thinner, faded" },
-  { id: "auxiliary", label: "Auxiliary", hint: "Background — grey, dashed" },
-  { id: "normal", label: "Normal", hint: "Default weight" }
+const LEVELS: { id: Emphasis; tkey: string; hintKey: string }[] = [
+  { id: "primary", tkey: "emphasis.primary", hintKey: "emphasis.primary.hint" },
+  { id: "secondary", tkey: "emphasis.secondary", hintKey: "emphasis.secondary.hint" },
+  { id: "auxiliary", tkey: "emphasis.auxiliary", hintKey: "emphasis.auxiliary.hint" },
+  { id: "normal", tkey: "emphasis.normal", hintKey: "emphasis.normal.hint" }
 ];
 
 export function EmphasisPanel() {
+  const t = useT();
   const panels = useStore((s) => s.panels);
   const selectedPanelId = useStore((s) => s.selectedPanelId);
   const setSeriesEmphasis = useStore((s) => s.setSeriesEmphasis);
@@ -20,14 +22,12 @@ export function EmphasisPanel() {
 
   return (
     <div className="p-3">
-      <div className="panel-title mb-1">Emphasis</div>
-      <p className="mb-3 text-2xs text-faint">
-        Rank data by importance so the key result stands out and supporting curves recede.
-      </p>
+      <div className="panel-title mb-1">{t("emp.title")}</div>
+      <p className="mb-3 text-2xs text-faint">{t("emp.desc")}</p>
 
-      {!selectedPanel && <div className="text-2xs text-faint">Select a panel first.</div>}
+      {!selectedPanel && <div className="text-2xs text-faint">{t("emp.selectPanel")}</div>}
       {selectedPanel && series.length === 0 && (
-        <div className="text-2xs text-faint">No data series detected in this panel.</div>
+        <div className="text-2xs text-faint">{t("color.noSeries")}</div>
       )}
 
       <div className="flex flex-col gap-3">
@@ -47,7 +47,7 @@ export function EmphasisPanel() {
                 return (
                   <button
                     key={lv.id}
-                    title={lv.hint}
+                    title={t(lv.hintKey)}
                     onClick={() => setSeriesEmphasis(selectedPanel.id, s.id, lv.id)}
                     className={`rounded px-2 py-1 text-2xs ${
                       active
@@ -55,7 +55,7 @@ export function EmphasisPanel() {
                         : "bg-panel text-muted ring-1 ring-line hover:text-ink"
                     }`}
                   >
-                    {lv.label}
+                    {t(lv.tkey)}
                   </button>
                 );
               })}

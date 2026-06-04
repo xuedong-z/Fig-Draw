@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, FileImage, FileCode2 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import { JOURNAL_PRESETS, DPI_OPTIONS, mmToPx } from "@/lib/journals";
 import {
   figureBounds,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/export";
 
 export function ExportPanel() {
+  const t = useT();
   const panels = useStore((s) => s.panels);
   const labelStyle = useStore((s) => s.labelStyle);
   const exportSettings = useStore((s) => s.exportSettings);
@@ -51,12 +53,10 @@ export function ExportPanel() {
 
   return (
     <div className="p-3">
-      <div className="panel-title mb-1">Export</div>
-      <p className="mb-3 text-2xs text-faint">
-        Renders the figure region only — panels and labels, no page chrome.
-      </p>
+      <div className="panel-title mb-1">{t("export.title")}</div>
+      <p className="mb-3 text-2xs text-faint">{t("export.desc")}</p>
 
-      <label className="field-label">Journal size</label>
+      <label className="field-label">{t("export.journalSize")}</label>
       <select
         className="input-dark mb-3 w-full"
         value={JOURNAL_PRESETS.find((j) => j.widthMm === Math.round(widthMm))?.id ?? "custom"}
@@ -74,7 +74,7 @@ export function ExportPanel() {
 
       <div className="mb-3 grid grid-cols-2 gap-2">
         <div>
-          <label className="field-label">Width (mm)</label>
+          <label className="field-label">{t("export.widthMm")}</label>
           <input
             type="number"
             className="input-dark w-full"
@@ -85,12 +85,12 @@ export function ExportPanel() {
           />
         </div>
         <div>
-          <label className="field-label">Height (mm)</label>
+          <label className="field-label">{t("export.heightMm")}</label>
           <input className="input-dark w-full opacity-60" value={heightMm.toFixed(1)} readOnly />
         </div>
       </div>
 
-      <label className="field-label">Format</label>
+      <label className="field-label">{t("export.format")}</label>
       <div className="mb-3 grid grid-cols-2 gap-1">
         <button
           onClick={() => setExport({ format: "png" })}
@@ -112,7 +112,7 @@ export function ExportPanel() {
 
       {isPng && (
         <>
-          <label className="field-label">Resolution</label>
+          <label className="field-label">{t("export.resolution")}</label>
           <div className="mb-3 grid grid-cols-3 gap-1">
             {DPI_OPTIONS.map((d) => (
               <button
@@ -134,13 +134,13 @@ export function ExportPanel() {
               checked={exportSettings.transparent}
               onChange={(e) => setExport({ transparent: e.target.checked })}
             />
-            Transparent background
+            {t("axis.transparentBg")}
           </label>
         </>
       )}
 
       <div className="mb-3 rounded-md border border-line bg-elevated px-2 py-1.5 text-2xs text-muted">
-        Output ≈ <span className="text-ink">{isPng ? `${pxW} × ${pxH} px` : "vector"}</span>
+        {t("export.output")} <span className="text-ink">{isPng ? `${pxW} × ${pxH} px` : t("export.vector")}</span>
         <span className="text-faint"> · {widthMm.toFixed(0)}×{heightMm.toFixed(0)} mm</span>
       </div>
 
@@ -149,10 +149,10 @@ export function ExportPanel() {
         onClick={run}
         disabled={!hasPanels || busy}
       >
-        <Download size={14} /> {busy ? "Rendering…" : `Export ${exportSettings.format.toUpperCase()}`}
+        <Download size={14} /> {busy ? t("export.rendering") : t("export.exportBtn", { fmt: exportSettings.format.toUpperCase() })}
       </button>
       {!hasPanels && (
-        <div className="mt-2 text-center text-2xs text-faint">Import a panel to enable export.</div>
+        <div className="mt-2 text-center text-2xs text-faint">{t("export.needPanel")}</div>
       )}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { Palette, Star, Type, SlidersHorizontal, Download, Ruler } from "lucide-react";
 import { useStore, type RightTab } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import { PalettePanel } from "./panels/PalettePanel";
 import { AxisPanel } from "./panels/AxisPanel";
 import { EmphasisPanel } from "./panels/EmphasisPanel";
@@ -9,35 +10,36 @@ import { TypographyPanel } from "./panels/TypographyPanel";
 import { TunePanel } from "./panels/TunePanel";
 import { ExportPanel } from "./panels/ExportPanel";
 
-const TABS: { id: RightTab; label: string; icon: typeof Palette }[] = [
-  { id: "palette", label: "Color", icon: Palette },
-  { id: "axis", label: "Axis", icon: Ruler },
-  { id: "type", label: "Type", icon: Type },
-  { id: "emphasis", label: "Emphasis", icon: Star },
-  { id: "tune", label: "Tune", icon: SlidersHorizontal },
-  { id: "export", label: "Export", icon: Download }
+const TABS: { id: RightTab; tkey: string; icon: typeof Palette }[] = [
+  { id: "palette", tkey: "tab.color", icon: Palette },
+  { id: "axis", tkey: "tab.axis", icon: Ruler },
+  { id: "type", tkey: "tab.type", icon: Type },
+  { id: "emphasis", tkey: "tab.emphasis", icon: Star },
+  { id: "tune", tkey: "tab.tune", icon: SlidersHorizontal },
+  { id: "export", tkey: "tab.export", icon: Download }
 ];
 
 export function RightSidebar() {
   const rightTab = useStore((s) => s.rightTab);
   const setRightTab = useStore((s) => s.setRightTab);
+  const t = useT();
 
   return (
     <aside className="flex w-72 shrink-0 flex-col border-l border-line bg-panel">
       <div className="flex shrink-0 border-b border-line">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const active = rightTab === t.id;
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const active = rightTab === tab.id;
           return (
             <button
-              key={t.id}
-              onClick={() => setRightTab(t.id)}
+              key={tab.id}
+              onClick={() => setRightTab(tab.id)}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-2xs transition-colors duration-100 ease-out ${
                 active ? "border-b-2 border-accent text-accent" : "text-muted hover:text-ink"
               }`}
             >
               <Icon size={15} />
-              {t.label}
+              {t(tab.tkey)}
             </button>
           );
         })}

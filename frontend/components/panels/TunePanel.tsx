@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { ROLE_LABELS } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 import { panelScale, PT_TO_FIG } from "@/lib/svg/mutate";
 import { findPalette } from "@/lib/palettes";
 
@@ -18,10 +18,10 @@ function lighten(hex: string, amt: number): string {
 }
 
 const DASHES = [
-  { v: "none", label: "Solid" },
-  { v: "4,3", label: "Dashed" },
-  { v: "1,3", label: "Dotted" },
-  { v: "6,3,1,3", label: "Dash-dot" }
+  { v: "none", tkey: "dash.solid" },
+  { v: "4,3", tkey: "dash.dashed" },
+  { v: "1,3", tkey: "dash.dotted" },
+  { v: "6,3,1,3", tkey: "dash.dashdot" }
 ];
 
 const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "DejaVu Sans", "Courier New"];
@@ -31,6 +31,7 @@ function asHex(c: string | null): string {
 }
 
 export function TunePanel() {
+  const t = useT();
   const panels = useStore((s) => s.panels);
   const selectedPanelId = useStore((s) => s.selectedPanelId);
   const selectedElementId = useStore((s) => s.selectedElementId);
@@ -75,7 +76,7 @@ export function TunePanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedElementId, selectedPanelId]);
 
-  if (!panel) return <div className="p-3 text-2xs text-faint">Select a panel, then an element.</div>;
+  if (!panel) return <div className="p-3 text-2xs text-faint">{t("tune.pickPanelEl")}</div>;
   if (!el) {
     const rank: Record<string, number> = {
       data: 0, fit: 1, scatter: 2, errorbar: 3, auxiliary: 4, legend: 5,
@@ -87,17 +88,17 @@ export function TunePanel() {
       .sort((a, b) => (rank[a.role] ?? 50) - (rank[b.role] ?? 50));
     return (
       <div className="p-3">
-        <div className="panel-title mb-2">Edit element · {panel.label}</div>
-        <label className="field-label">Pick an element</label>
+        <div className="panel-title mb-2">{t("tune.editEl")} · {panel.label}</div>
+        <label className="field-label">{t("tune.pickEl")}</label>
         <select
           className="input-dark mb-2 w-full"
           value=""
           onChange={(e) => e.target.value && selectElement(e.target.value)}
         >
-          <option value="">Select an element…</option>
+          <option value="">{t("tune.pickElPlaceholder")}</option>
           {items.map((e) => (
             <option key={e.scid} value={e.scid}>
-              {ROLE_LABELS[e.role]}
+              {t(`role.${e.role}`)}
               {e.text
                 ? ` · "${e.text.slice(0, 16)}"`
                 : e.stroke && e.stroke !== "none"
@@ -105,11 +106,11 @@ export function TunePanel() {
                   : e.fill && e.fill !== "none"
                     ? ` · ${e.fill}`
                     : ""}
-              {e.hidden ? " · hidden" : ""}
+              {e.hidden ? ` · ${t("tune.hidden")}` : ""}
             </option>
           ))}
         </select>
-        <p className="text-2xs text-faint">…or click an element directly on the figure.</p>
+        <p className="text-2xs text-faint">{t("tune.orClick")}</p>
       </div>
     );
   }
@@ -143,16 +144,16 @@ export function TunePanel() {
 
   return (
     <div className="p-3">
-      <div className="panel-title mb-1">Edit element</div>
+      <div className="panel-title mb-1">{t("tune.editEl")}</div>
       <div className="mb-3 truncate text-2xs text-faint">
-        {ROLE_LABELS[el.role]} · {el.tag}
+        {t(`role.${el.role}`)} · {el.tag}
         {el.text ? ` · "${el.text.slice(0, 16)}"` : ""}
       </div>
 
       {/* Text: font size + color */}
       {isText && (
         <>
-          <label className="field-label">Text</label>
+          <label className="field-label">{t("tune.text")}</label>
           <input
             className="input-dark mb-3 w-full"
             value={textVal}
@@ -161,7 +162,7 @@ export function TunePanel() {
               setElementText(panel.id, el.scid, e.target.value);
             }}
           />
-          <label className="field-label">Font</label>
+          <label className="field-label">{t("tune.font")}</label>
           <select
             className="input-dark mb-3 w-full"
             value={FONTS.includes(fontFam) ? fontFam : "Arial"}
@@ -176,7 +177,7 @@ export function TunePanel() {
               </option>
             ))}
           </select>
-          <label className="field-label">Font size (pt)</label>
+          <label className="field-label">{t("tune.fontSize")}</label>
           <input
             type="number"
             step={0.5}
@@ -189,7 +190,7 @@ export function TunePanel() {
                 set("font-size", `${Math.round((Number(e.target.value) * PT_TO_FIG) / sc * 1000) / 1000}px`);
             }}
           />
-          <label className="field-label">Text color</label>
+          <label className="field-label">{t("tune.textColor")}</label>
           <input
             type="color"
             value={fill === "#000000" && el.fill ? asHex(el.fill) : fill}
@@ -202,26 +203,26 @@ export function TunePanel() {
           <Swatches active={fill} onPick={(c) => { setFill(c); set("fill", c); }} />
           {el.role === "text-axis" && (
             <>
-              <label className="field-label">Axis label position</label>
+              <label className="field-label">{t("tune.axisLabelPos")}</label>
               <div className="mb-3 flex gap-1">
                 <button
                   className="chip flex-1 justify-center"
                   onClick={() => moveAxisLabel(panel.id, el.scid, { center: true })}
-                  title="Center the label on the axis"
+                  title={t("tip.centerLabel")}
                 >
-                  Center
+                  {t("act.center")}
                 </button>
                 <button
                   className="chip justify-center px-2.5"
                   onClick={() => moveAxisLabel(panel.id, el.scid, { nudge: -3 })}
-                  title="Closer to axis"
+                  title={t("tip.closer")}
                 >
                   −
                 </button>
                 <button
                   className="chip justify-center px-2.5"
                   onClick={() => moveAxisLabel(panel.id, el.scid, { nudge: 3 })}
-                  title="Farther from axis"
+                  title={t("tip.farther")}
                 >
                   +
                 </button>
@@ -234,7 +235,7 @@ export function TunePanel() {
       {/* Filled shape (bar / area / scatter): fill leads */}
       {!isText && hasFill && (
         <>
-          <label className="field-label">Fill color</label>
+          <label className="field-label">{t("tune.fillColor")}</label>
           <input
             type="color"
             value={fill}
@@ -245,7 +246,7 @@ export function TunePanel() {
             }}
           />
           <Swatches active={fill} onPick={(c) => { setFill(c); set("fill", c); }} />
-          <label className="field-label">Gradient fill · from palette</label>
+          <label className="field-label">{t("tune.gradientFill")}</label>
           <div className="mb-3 grid grid-cols-4 gap-1.5">
             {swatchColors.map((c, i) => {
               const from = lighten(c, 0.72);
@@ -253,7 +254,7 @@ export function TunePanel() {
                 <button
                   key={i}
                   onClick={() => setElementGradient(panel.id, el.scid, from, c)}
-                  title={`Light → ${c} gradient`}
+                  title={t("tip.gradient", { c })}
                   className="h-6 rounded border border-line transition hover:ring-2 hover:ring-accent"
                   style={{ background: `linear-gradient(to top, ${from}, ${c})` }}
                 />
@@ -268,7 +269,7 @@ export function TunePanel() {
         <>
           <div className="mb-1 grid grid-cols-2 gap-2">
             <div>
-              <label className="field-label">{hasFill ? "Edge" : "Color"}</label>
+              <label className="field-label">{hasFill ? t("tune.edge") : t("tune.color")}</label>
               <input
                 type="color"
                 value={stroke}
@@ -280,7 +281,7 @@ export function TunePanel() {
               />
             </div>
             <div>
-              <label className="field-label">Width (pt)</label>
+              <label className="field-label">{t("tune.widthPt")}</label>
               <input
                 type="number"
                 step={0.1}
@@ -296,7 +297,7 @@ export function TunePanel() {
             </div>
           </div>
           <Swatches active={stroke} onPick={(c) => { setStroke(c); set("stroke", c); }} />
-          <label className="field-label">{hasFill ? "Edge dash" : "Dash"}</label>
+          <label className="field-label">{hasFill ? t("tune.edgeDash") : t("tune.dash")}</label>
           <select
             className="input-dark mb-3 w-full"
             value={DASHES.some((d) => d.v === dash) ? dash : "none"}
@@ -307,7 +308,7 @@ export function TunePanel() {
           >
             {DASHES.map((d) => (
               <option key={d.v} value={d.v}>
-                {d.label}
+                {t(d.tkey)}
               </option>
             ))}
           </select>
@@ -316,7 +317,7 @@ export function TunePanel() {
 
       {el.hasMarker && (
         <>
-          <label className="field-label">Marker size (radius, whole series)</label>
+          <label className="field-label">{t("tune.markerSize")}</label>
           <input
             type="number"
             step={0.5}
@@ -331,7 +332,7 @@ export function TunePanel() {
         </>
       )}
 
-      <label className="field-label">Opacity · {Number(opacity).toFixed(2)}</label>
+      <label className="field-label">{t("tune.opacity")} · {Number(opacity).toFixed(2)}</label>
       <input
         type="range"
         min={0}
@@ -348,25 +349,25 @@ export function TunePanel() {
       <button
         className="chip w-full justify-center"
         onClick={() => applyElementStyleToRole(panel.id, el.scid)}
-        title="Copy this element's color to the same kind in THIS figure"
+        title={t("tip.applyToRole")}
       >
-        Apply to all &ldquo;{ROLE_LABELS[el.role]}&rdquo; in this fig
+        {t("tune.applyToRole", { role: t(`role.${el.role}`) })}
       </button>
 
       <div className="mt-4 flex gap-2 border-t border-line pt-3">
         <button
           className={`chip flex-1 ${hidden ? "chip-on" : ""}`}
           onClick={() => hideElement(panel.id, el.scid, !hidden)}
-          title={hidden ? "Show this element" : "Hide this element"}
+          title={hidden ? t("tip.show") : t("tip.hide")}
         >
-          {hidden ? <Eye size={13} /> : <EyeOff size={13} />} {hidden ? "Show" : "Hide"}
+          {hidden ? <Eye size={13} /> : <EyeOff size={13} />} {hidden ? t("act.show") : t("act.hide")}
         </button>
         <button
           className="chip flex-1 text-bad"
           onClick={() => deleteElement(panel.id, el.scid)}
-          title="Delete this element permanently"
+          title={t("tip.delete")}
         >
-          <Trash2 size={13} /> Delete
+          <Trash2 size={13} /> {t("act.delete")}
         </button>
       </div>
     </div>

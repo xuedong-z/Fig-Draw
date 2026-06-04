@@ -30,6 +30,9 @@ export type ElementRole =
 /** Visual emphasis level applied via Module F. */
 export type Emphasis = "primary" | "secondary" | "auxiliary" | "normal";
 
+/** UI language (Module: i18n). Document state stays language-agnostic. */
+export type Lang = "en" | "zh";
+
 /** Human-facing role groups used by the role-correction dropdown (Module D2). */
 export const ROLE_LABELS: Record<ElementRole, string> = {
   data: "Measured data",

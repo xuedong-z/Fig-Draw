@@ -14,17 +14,19 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { useStore, type AlignKind } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 
-const ALIGN: { kind: AlignKind; icon: LucideIcon; title: string }[] = [
-  { kind: "left", icon: AlignStartVertical, title: "Align left" },
-  { kind: "hcenter", icon: AlignCenterVertical, title: "Align horizontal centers" },
-  { kind: "right", icon: AlignEndVertical, title: "Align right" },
-  { kind: "top", icon: AlignStartHorizontal, title: "Align top" },
-  { kind: "vcenter", icon: AlignCenterHorizontal, title: "Align vertical centers" },
-  { kind: "bottom", icon: AlignEndHorizontal, title: "Align bottom" }
+const ALIGN: { kind: AlignKind; icon: LucideIcon; tkey: string }[] = [
+  { kind: "left", icon: AlignStartVertical, tkey: "tip.align.left" },
+  { kind: "hcenter", icon: AlignCenterVertical, tkey: "tip.align.hcenter" },
+  { kind: "right", icon: AlignEndVertical, tkey: "tip.align.right" },
+  { kind: "top", icon: AlignStartHorizontal, tkey: "tip.align.top" },
+  { kind: "vcenter", icon: AlignCenterHorizontal, tkey: "tip.align.vcenter" },
+  { kind: "bottom", icon: AlignEndHorizontal, tkey: "tip.align.bottom" }
 ];
 
 export function AlignToolbar() {
+  const t = useT();
   const selectedPanelIds = useStore((s) => s.selectedPanelIds);
   const alignPanels = useStore((s) => s.alignPanels);
   const distributePanels = useStore((s) => s.distributePanels);
@@ -36,11 +38,11 @@ export function AlignToolbar() {
 
   return (
     <div className="absolute right-3 top-3 z-30 flex items-center gap-0.5 rounded-md border border-line bg-panel/95 p-1 shadow-pop backdrop-blur">
-      <span className="px-1 text-2xs text-faint">{selectedPanelIds.length} sel</span>
-      {ALIGN.map(({ kind, icon: Icon, title }) => (
+      <span className="px-1 text-2xs text-faint">{selectedPanelIds.length} {t("align.sel")}</span>
+      {ALIGN.map(({ kind, icon: Icon, tkey }) => (
         <button
           key={kind}
-          title={title}
+          title={t(tkey)}
           onClick={() => alignPanels(kind)}
           className="rounded p-1 text-muted hover:bg-hover hover:text-ink"
         >
@@ -49,7 +51,7 @@ export function AlignToolbar() {
       ))}
       <span className="mx-0.5 h-4 w-px bg-line" />
       <button
-        title="Distribute horizontally"
+        title={t("tip.dist.h")}
         disabled={!canDistribute}
         onClick={() => distributePanels("h")}
         className="rounded p-1 text-muted hover:bg-hover hover:text-ink disabled:opacity-30"
@@ -57,7 +59,7 @@ export function AlignToolbar() {
         <AlignHorizontalDistributeCenter size={15} />
       </button>
       <button
-        title="Distribute vertically"
+        title={t("tip.dist.v")}
         disabled={!canDistribute}
         onClick={() => distributePanels("v")}
         className="rounded p-1 text-muted hover:bg-hover hover:text-ink disabled:opacity-30"
@@ -66,14 +68,14 @@ export function AlignToolbar() {
       </button>
       <span className="mx-0.5 h-4 w-px bg-line" />
       <button
-        title="Auto-crop whitespace on all selected panels"
+        title={t("tip.cropSel")}
         onClick={cropSelected}
         className="rounded p-1 text-muted hover:bg-hover hover:text-ink"
       >
         <Crop size={15} />
       </button>
       <button
-        title="Match all selected panels to the first one's size"
+        title={t("tip.matchSize")}
         onClick={matchSizeSelected}
         className="rounded p-1 text-muted hover:bg-hover hover:text-ink"
       >

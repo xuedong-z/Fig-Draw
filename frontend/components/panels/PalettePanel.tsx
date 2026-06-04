@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { Check, Eye, ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { palettesByCategory, CATEGORY_LABELS, CATEGORY_ORDER, findPalette } from "@/lib/palettes";
+import { useT } from "@/lib/i18n";
+import { palettesByCategory, CATEGORY_ORDER, findPalette } from "@/lib/palettes";
 import type { PaletteCategory } from "@/lib/types";
 
 export function PalettePanel() {
+  const t = useT();
   const grouped = palettesByCategory();
   const activePaletteId = useStore((s) => s.activePaletteId);
   const activeCat = activePaletteId ? findPalette(activePaletteId)?.category : null;
@@ -28,11 +30,8 @@ export function PalettePanel() {
 
   return (
     <div className="p-3">
-      <div className="panel-title mb-1">Color library</div>
-      <p className="mb-3 text-2xs text-faint">
-        Click a palette to recolor every panel&apos;s data series in order. Structure (axes, ticks,
-        text) is left untouched.
-      </p>
+      <div className="panel-title mb-1">{t("color.library")}</div>
+      <p className="mb-3 text-2xs text-faint">{t("color.desc")}</p>
 
       {CATEGORY_ORDER.map((cat) => {
         const list = grouped[cat];
@@ -46,7 +45,7 @@ export function PalettePanel() {
               className="flex w-full items-center gap-1 rounded px-0.5 py-1 text-left hover:bg-hover"
             >
               {isOpen ? <ChevronDown size={12} className="shrink-0 text-faint" /> : <ChevronRight size={12} className="shrink-0 text-faint" />}
-              <span className={`field-label flex-1 ${hasActive ? "text-accent" : ""}`}>{CATEGORY_LABELS[cat]}</span>
+              <span className={`field-label flex-1 ${hasActive ? "text-accent" : ""}`}>{t(`cat.${cat}`)}</span>
               <span className="text-2xs text-faint">{list.length}</span>
             </button>
             {isOpen && (
@@ -83,11 +82,11 @@ export function PalettePanel() {
       {/* per-series override */}
       <div className="mt-2 border-t border-line pt-3">
         <div className="field-label mb-2">
-          Per-series color {selectedPanel ? `· ${selectedPanel.label}` : ""}
+          {t("color.perSeries")} {selectedPanel ? `· ${selectedPanel.label}` : ""}
         </div>
-        {!selectedPanel && <div className="text-2xs text-faint">Select a panel to fine-tune colors.</div>}
+        {!selectedPanel && <div className="text-2xs text-faint">{t("color.selectPanel")}</div>}
         {selectedPanel && series.length === 0 && (
-          <div className="text-2xs text-faint">No data series detected in this panel.</div>
+          <div className="text-2xs text-faint">{t("color.noSeries")}</div>
         )}
         <div className="flex flex-col gap-1.5">
           {selectedPanel &&

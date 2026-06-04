@@ -2,6 +2,7 @@
 
 import { Wand2, RotateCcw } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import type { PanelLabelStyle, TypographySettings } from "@/lib/types";
 
 const FONTS = ["Arial", "Helvetica", "Helvetica Neue", "Calibri", "Times New Roman", "Georgia"];
@@ -54,6 +55,7 @@ function NumRow({
 }
 
 export function TypographyPanel() {
+  const t = useT();
   const typography = useStore((s) => s.typography);
   const setTypography = useStore((s) => s.setTypography);
   const unifyTypography = useStore((s) => s.unifyTypography);
@@ -61,24 +63,21 @@ export function TypographyPanel() {
   const setLabelStyle = useStore((s) => s.setLabelStyle);
   const hasPanels = useStore((s) => s.panels.length > 0);
 
-  const t = <K extends keyof TypographySettings>(k: K, v: TypographySettings[K]) =>
+  const up = <K extends keyof TypographySettings>(k: K, v: TypographySettings[K]) =>
     setTypography({ [k]: v } as Partial<TypographySettings>);
   const l = <K extends keyof PanelLabelStyle>(k: K, v: PanelLabelStyle[K]) =>
     setLabelStyle({ [k]: v } as Partial<PanelLabelStyle>);
 
   return (
     <div className="p-3">
-      <div className="panel-title mb-1">Typography</div>
-      <p className="mb-3 text-2xs text-faint">
-        Targets by role; grey numbers are Nature recommendations. After laying panels out,
-        click Unify to normalize every sub-figure to these sizes.
-      </p>
+      <div className="panel-title mb-1">{t("type.title")}</div>
+      <p className="mb-3 text-2xs text-faint">{t("type.desc")}</p>
 
-      <label className="field-label">Font family</label>
+      <label className="field-label">{t("type.fontFamily")}</label>
       <select
         className="input-dark mb-3 w-full"
         value={typography.fontFamily}
-        onChange={(e) => t("fontFamily", e.target.value)}
+        onChange={(e) => up("fontFamily", e.target.value)}
       >
         {FONTS.map((f) => (
           <option key={f} value={f}>
@@ -87,26 +86,26 @@ export function TypographyPanel() {
         ))}
       </select>
 
-      <div className="field-label mb-1">Font size (pt)</div>
+      <div className="field-label mb-1">{t("type.fontSize")}</div>
       <div className="mb-3 flex flex-col gap-1.5">
-        <NumRow label="Axis label" value={typography.axisLabelPt} hint={`${NATURE_PRESET.axisLabelPt}`} onChange={(v) => t("axisLabelPt", v)} />
-        <NumRow label="Tick label" value={typography.tickLabelPt} hint={`${NATURE_PRESET.tickLabelPt}`} onChange={(v) => t("tickLabelPt", v)} />
-        <NumRow label="Legend" value={typography.legendPt} hint={`${NATURE_PRESET.legendPt}`} onChange={(v) => t("legendPt", v)} />
-        <NumRow label="Title" value={typography.titlePt} hint={`${NATURE_PRESET.titlePt}`} onChange={(v) => t("titlePt", v)} />
+        <NumRow label={t("type.axisLabel")} value={typography.axisLabelPt} hint={`${NATURE_PRESET.axisLabelPt}`} onChange={(v) => up("axisLabelPt", v)} />
+        <NumRow label={t("type.tickLabel")} value={typography.tickLabelPt} hint={`${NATURE_PRESET.tickLabelPt}`} onChange={(v) => up("tickLabelPt", v)} />
+        <NumRow label={t("type.legend")} value={typography.legendPt} hint={`${NATURE_PRESET.legendPt}`} onChange={(v) => up("legendPt", v)} />
+        <NumRow label={t("type.titleRow")} value={typography.titlePt} hint={`${NATURE_PRESET.titlePt}`} onChange={(v) => up("titlePt", v)} />
       </div>
 
-      <div className="field-label mb-1">Line width (pt)</div>
+      <div className="field-label mb-1">{t("type.lineWidth")}</div>
       <div className="mb-3 flex flex-col gap-1.5">
-        <NumRow label="Data line" value={typography.dataLineWidthPt} step={0.1} hint={`${NATURE_PRESET.dataLineWidthPt}`} onChange={(v) => t("dataLineWidthPt", v)} />
-        <NumRow label="Axis / frame" value={typography.axisLineWidthPt} step={0.1} hint={`${NATURE_PRESET.axisLineWidthPt}`} onChange={(v) => t("axisLineWidthPt", v)} />
-        <NumRow label="Tick" value={typography.tickLineWidthPt} step={0.1} hint={`${NATURE_PRESET.tickLineWidthPt}`} onChange={(v) => t("tickLineWidthPt", v)} />
+        <NumRow label={t("type.dataLine")} value={typography.dataLineWidthPt} step={0.1} hint={`${NATURE_PRESET.dataLineWidthPt}`} onChange={(v) => up("dataLineWidthPt", v)} />
+        <NumRow label={t("type.axisFrame")} value={typography.axisLineWidthPt} step={0.1} hint={`${NATURE_PRESET.axisLineWidthPt}`} onChange={(v) => up("axisLineWidthPt", v)} />
+        <NumRow label={t("type.tick")} value={typography.tickLineWidthPt} step={0.1} hint={`${NATURE_PRESET.tickLineWidthPt}`} onChange={(v) => up("tickLineWidthPt", v)} />
       </div>
 
       <div className="flex gap-2">
         <button
           className="tool-btn justify-center px-2"
           onClick={() => setTypography(NATURE_PRESET)}
-          title="Reset all targets to Nature recommendations"
+          title={t("tip.reset")}
         >
           <RotateCcw size={13} />
         </button>
@@ -115,15 +114,15 @@ export function TypographyPanel() {
           onClick={unifyTypography}
           disabled={!hasPanels}
         >
-          <Wand2 size={14} /> Unify to Nature size
+          <Wand2 size={14} /> {t("type.unify")}
         </button>
       </div>
 
       {/* Panel labels */}
       <div className="mt-4 border-t border-line pt-3">
-        <div className="panel-title mb-2">Panel labels</div>
+        <div className="panel-title mb-2">{t("type.panelLabels")}</div>
         <div className="mb-2">
-          <label className="field-label">Format · fixed top-left</label>
+          <label className="field-label">{t("type.format")}</label>
           <select
             className="input-dark w-full"
             value={labelStyle.format}
@@ -137,8 +136,8 @@ export function TypographyPanel() {
           </select>
         </div>
         <div className="flex items-center gap-3">
-          <NumRow label="Size (pt)" value={labelStyle.fontSizePt} onChange={(v) => l("fontSizePt", v)} />
-          <NumRow label="Gap (px)" value={labelStyle.offsetPx} min={0} step={1} onChange={(v) => l("offsetPx", v)} />
+          <NumRow label={t("type.sizePt")} value={labelStyle.fontSizePt} onChange={(v) => l("fontSizePt", v)} />
+          <NumRow label={t("type.gapPx")} value={labelStyle.offsetPx} min={0} step={1} onChange={(v) => l("offsetPx", v)} />
         </div>
         <div className="mt-2 flex items-center gap-3 text-2xs text-muted">
           <label className="flex items-center gap-1.5">
@@ -147,7 +146,7 @@ export function TypographyPanel() {
               checked={labelStyle.bold}
               onChange={(e) => l("bold", e.target.checked)}
             />
-            Bold
+            {t("type.bold")}
           </label>
           <label className="flex items-center gap-1.5">
             <input
@@ -155,7 +154,7 @@ export function TypographyPanel() {
               checked={labelStyle.whiteBacking}
               onChange={(e) => l("whiteBacking", e.target.checked)}
             />
-            White backing
+            {t("type.whiteBacking")}
           </label>
           <label className="ml-auto flex items-center gap-1.5">
             <input

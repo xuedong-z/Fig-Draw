@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { Sparkles, ChevronDown } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import { EXAMPLES, loadExample } from "@/lib/examples";
 
 export function ExampleMenu() {
   const importSvg = useStore((s) => s.importSvg);
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   const loadOne = async (file: string) => {
@@ -22,8 +24,8 @@ export function ExampleMenu() {
 
   return (
     <div className="relative">
-      <button className="tool-btn" onClick={() => setOpen((o) => !o)} title="Load a bundled example figure">
-        <Sparkles size={15} /> Examples <ChevronDown size={11} />
+      <button className="tool-btn" onClick={() => setOpen((o) => !o)} title={t("tip.examples")}>
+        <Sparkles size={15} /> {t("act.examples")} <ChevronDown size={11} />
       </button>
       {open && (
         <>
@@ -44,7 +46,7 @@ export function ExampleMenu() {
               onClick={loadAll}
               className="w-full rounded px-2 py-1.5 text-left text-xs text-accent hover:bg-hover"
             >
-              Load all ({EXAMPLES.length} panels)
+              {t("examples.loadAll")} ({EXAMPLES.length} {t("examples.panels")})
             </button>
           </div>
         </>

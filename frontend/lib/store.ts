@@ -14,6 +14,7 @@ import type {
   ElementRole,
   Emphasis,
   ExportSettings,
+  Lang,
   Panel,
   ParsedElement,
   PanelLabelStyle,
@@ -151,7 +152,10 @@ interface AppState {
   rightTab: RightTab;
   showGrid: boolean;
   snapEnabled: boolean;
-  importMessages: { id: string; text: string; tone: "info" | "warn" }[];
+  lang: Lang;
+  // `text` is an English fallback; `i18n` (key + vars) lets Messages re-translate
+  // the toast live when the language is switched.
+  importMessages: { id: string; text: string; tone: "info" | "warn"; i18n?: { key: string; vars?: Record<string, string | number> } }[];
 
   // history
   past: DocSnapshot[];
@@ -170,6 +174,7 @@ interface AppState {
   setRightTab: (t: RightTab) => void;
   toggleGrid: () => void;
   toggleSnap: () => void;
+  setLang: (l: Lang) => void;
 
   snapshot: () => void;
   updatePanelRect: (id: string, rect: { x: number; y: number; w: number; h: number }) => void;
@@ -641,6 +646,7 @@ export const useStore = create<AppState>((set, get) => ({
   rightTab: "palette",
   showGrid: true,
   snapEnabled: true,
+  lang: "en", // hydrated from localStorage on the client (see Editor.tsx)
   importMessages: [],
 
   past: [],
@@ -666,7 +672,12 @@ export const useStore = create<AppState>((set, get) => ({
       set((s) => ({
         importMessages: [
           ...s.importMessages,
-          { id: `m${messageCounter++}`, text: `Failed to import ${name}: ${(err as Error).message}`, tone: "warn" }
+          {
+            id: `m${messageCounter++}`,
+            text: `Failed to import ${name}: ${(err as Error).message}`,
+            tone: "warn" as const,
+            i18n: { key: "warn.importFail", vars: { name, err: (err as Error).message } }
+          }
         ]
       }));
       return;
@@ -729,7 +740,9 @@ export const useStore = create<AppState>((set, get) => ({
       const msgs = result!.warnings.map((w) => ({
         id: `m${messageCounter++}`,
         text: `${name}: ${w.message}`,
-        tone: "warn" as const
+        tone: "warn" as const,
+        // `kind` maps 1:1 to a `warn.*` dictionary key; Messages translates live.
+        i18n: { key: `warn.${w.kind}`, vars: { name } }
       }));
       return {
         panels,
@@ -877,6 +890,17 @@ export const useStore = create<AppState>((set, get) => ({
   setRightTab: (t) => set({ rightTab: t }),
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
   toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
+  setLang: (l) => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("sc-lang", l);
+        document.documentElement.lang = l === "zh" ? "zh-CN" : "en";
+      } catch {
+        /* private-mode / storage blocked — language still applies in-memory */
+      }
+    }
+    set({ lang: l });
+  },
 
   snapshot: () =>
     set((s) => ({ past: [...s.past, captureDoc(s)].slice(-80), future: [] })),
