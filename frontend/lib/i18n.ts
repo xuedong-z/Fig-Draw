@@ -223,6 +223,9 @@ const STRINGS = {
   "canvas.importBegin": { en: "Import an SVG to begin", zh: "导入 SVG 以开始" },
   "canvas.importHint": { en: "Import your exported sub-figures, or try an example:", zh: "导入你导出的子图，或试试示例：" },
 
+  // ── Drag & drop ─────────────────────────────────────────────────────
+  "drop.hint": { en: "Drop files to import", zh: "拖入文件以导入" },
+
   // ── Element roles (Tune dropdown / label) ───────────────────────────
   "role.data": { en: "Measured data", zh: "实测数据" },
   "role.fit": { en: "Fitted curve", zh: "拟合曲线" },
@@ -258,7 +261,8 @@ const STRINGS = {
   "warn.bitmap": { en: "{name}: This figure is mostly a bitmap image — layout only (its internal styles can’t be edited).", zh: "{name}：此图主要是位图——仅支持布局（无法编辑其内部样式）。" },
   "warn.color-scale": { en: "{name}: This looks like a continuous color-scale figure (heatmap/contour) — recoloring would change its meaning. Layout only is recommended.", zh: "{name}：这看起来是连续色阶图（热图/等高线）——重新着色会改变其含义。建议仅用于布局。" },
   "warn.no-data": { en: "{name}: No data series were found — Origin doesn’t export the data glyphs for box / stacked-column / error-bar / heatmap / pie plots (only the axes survive). Re-export this graph as a line / scatter / column plot, or export it as a PNG image instead.", zh: "{name}：未找到数据系列——Origin 不会导出箱线图 / 堆叠柱 / 误差棒 / 热图 / 饼图的数据图元（仅保留坐标轴）。请将此图重新导出为折线 / 散点 / 柱状图，或改为导出 PNG 图片。" },
-  "warn.importFail": { en: "Failed to import {name}: {err}", zh: "导入 {name} 失败：{err}" }
+  "warn.importFail": { en: "Failed to import {name}: {err}", zh: "导入 {name} 失败：{err}" },
+  "warn.saveQuota": { en: "Auto-save failed: this figure is too large for browser storage. Export it to keep your work — a refresh will lose unsaved changes.", zh: "自动保存失败：此图太大，浏览器存不下。请导出以保存——刷新会丢失未保存的修改。" }
 } satisfies Record<string, Entry>;
 
 export type StringKey = keyof typeof STRINGS;

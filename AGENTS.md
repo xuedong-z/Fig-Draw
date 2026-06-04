@@ -35,8 +35,14 @@ figure. There is no data import, no chart generation, and no backend.
 - **No AI/LLM** anywhere in recognition — all classification is rule-based
   (`lib/svg/roles.ts`).
 - **No backend.** Everything runs in the browser.
-- **No `localStorage`/persistence for core document state.** The figure lives in
-  memory (Zustand). Undo/redo is in-memory snapshots.
+- **The document auto-saves to `localStorage`** (key `sc-doc-v1`, debounced ~500ms)
+  so a page refresh doesn't wipe the user's work; it's rehydrated on mount via
+  `hydrateDoc()` from an effect (not the store initializer — that would cause an SSR
+  hydration mismatch). Only the *document* (the `DocSnapshot` keys: panels +
+  page/typography/label settings + caption) is persisted. **Undo/redo history stays
+  in-memory** (snapshots are not persisted); the UI language persists separately
+  (`sc-lang`). Over-quota writes degrade gracefully (retry without the pristine
+  `baseSvg` copies, then warn). Still **no backend / no server-side storage.**
 - The **SVG string is the single source of truth** for a panel. All edits are
   pure `string -> string` transforms that read/write `data-sc*` attributes; the
   React model is updated alongside but never replaces the SVG.

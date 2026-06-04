@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { Upload, Undo2, Redo2, Download, FlaskConical, Scissors, Languages } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import { importFiles } from "@/lib/importFiles";
 import { ExampleMenu } from "./ExampleMenu";
 
 export function TopBar() {
@@ -22,27 +23,7 @@ export function TopBar() {
   const setLang = useStore((s) => s.setLang);
 
   const onFiles = async (files: FileList | null) => {
-    if (!files) return;
-    for (const file of Array.from(files)) {
-      const base = file.name.replace(/\.[^.]+$/, "");
-      if (file.type === "image/svg+xml" || /\.svg$/i.test(file.name)) {
-        importSvg(base, await file.text());
-      } else if (file.type.startsWith("image/")) {
-        // raster (PNG/JPG/…): read as data URL + natural size, place as an image panel
-        const dataUrl = await new Promise<string>((res) => {
-          const r = new FileReader();
-          r.onload = () => res(r.result as string);
-          r.readAsDataURL(file);
-        });
-        const dims = await new Promise<{ w: number; h: number }>((res) => {
-          const img = new Image();
-          img.onload = () => res({ w: img.naturalWidth || 400, h: img.naturalHeight || 300 });
-          img.onerror = () => res({ w: 400, h: 300 });
-          img.src = dataUrl;
-        });
-        importImage(base, dataUrl, dims.w, dims.h);
-      }
-    }
+    await importFiles(files, { importSvg, importImage });
     if (fileRef.current) fileRef.current.value = "";
   };
 

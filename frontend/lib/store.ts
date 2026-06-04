@@ -175,6 +175,8 @@ interface AppState {
   toggleGrid: () => void;
   toggleSnap: () => void;
   setLang: (l: Lang) => void;
+  /** Restore the auto-saved document from localStorage (called once on mount). */
+  hydrateDoc: () => void;
 
   snapshot: () => void;
   updatePanelRect: (id: string, rect: { x: number; y: number; w: number; h: number }) => void;
@@ -250,6 +252,68 @@ function captureDoc(s: AppState): DocSnapshot {
     gridCols: s.gridCols,
     gridGap: s.gridGap
   });
+}
+
+// ── Document auto-save (localStorage) ────────────────────────────────────────
+// The document (panels + page/typography/label settings + caption) is mirrored to
+// localStorage so a page refresh doesn't wipe the user's work. Undo/redo history is
+// NOT persisted (it stays in-memory). Writes are debounced so a drag — which fires
+// many rect updates — coalesces into a single save once the user settles.
+const DOC_STORAGE_KEY = "sc-doc-v1";
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let warnedQuota = false;
+
+function persistDocNow() {
+  if (typeof window === "undefined") return;
+  const doc = captureDoc(useStore.getState()); // deep-cloned, JSON-safe (no DOM/fns)
+  const write = (payload: unknown) =>
+    window.localStorage.setItem(DOC_STORAGE_KEY, JSON.stringify(payload));
+  try {
+    write(doc);
+    warnedQuota = false;
+  } catch {
+    // Over quota — retry without the pristine `baseSvg` copies (≈halves the size;
+    // "reset to original" then degrades to "reset to last-saved").
+    try {
+      write({ ...doc, panels: doc.panels.map((p) => ({ ...p, baseSvg: p.svg })) });
+      warnedQuota = false;
+    } catch {
+      if (!warnedQuota) {
+        warnedQuota = true;
+        useStore.setState((s) => ({
+          importMessages: [
+            ...s.importMessages,
+            {
+              id: `m${messageCounter++}`,
+              text: "Auto-save failed: this figure is too large for browser storage. Export it to keep your work — a refresh will lose unsaved changes.",
+              tone: "warn" as const,
+              i18n: { key: "warn.saveQuota" }
+            }
+          ]
+        }));
+      }
+    }
+  }
+}
+
+function scheduleDocSave() {
+  if (typeof window === "undefined") return;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistDocNow, 500);
+}
+
+function readPersistedDoc(): Partial<DocSnapshot> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DOC_STORAGE_KEY);
+    if (!raw) return null;
+    const doc = JSON.parse(raw);
+    // Only accept a well-formed payload; ignore anything else.
+    if (doc && typeof doc === "object" && Array.isArray(doc.panels)) return doc;
+  } catch {
+    /* corrupt JSON or storage blocked — fall through to a fresh session */
+  }
+  return null;
 }
 
 /** Plot-area box (figure/viewBox coords) for redrawing the axis frame. */
@@ -901,6 +965,10 @@ export const useStore = create<AppState>((set, get) => ({
     }
     set({ lang: l });
   },
+  hydrateDoc: () => {
+    const doc = readPersistedDoc();
+    if (doc) set(doc as Partial<AppState>);
+  },
 
   snapshot: () =>
     set((s) => ({ past: [...s.past, captureDoc(s)].slice(-80), future: [] })),
@@ -1385,6 +1453,13 @@ export const useStore = create<AppState>((set, get) => ({
       return { ...s, ...next, past, future: s.future.slice(1) };
     })
 }));
+
+// Auto-save the document on any change (debounced). Hydration is triggered from the
+// Editor mount effect so the SSR/first-paint markup matches and React doesn't throw a
+// hydration mismatch.
+if (typeof window !== "undefined") {
+  useStore.subscribe(scheduleDocSave);
+}
 
 // Dev-only debug handle (stripped from production builds).
 if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
