@@ -848,7 +848,7 @@ export function mergeTextFragments(svg: string, scids: string[]): string {
     return tspans.length ? Array.from(tspans).map((t) => t.textContent ?? "").join("") : (e.textContent ?? "");
   };
   const frags = els
-    .map((e) => ({ e, x: num(e, "x"), y: num(e, "y"), fs: parseFloat(getStyleValue(e, "font-size") ?? "0") || 0, fill: getStyleValue(e, "fill"), text: glyphText(e) }))
+    .map((e) => ({ e, x: num(e, "x"), y: num(e, "y"), fs: parseFloat(getStyleValue(e, "font-size") ?? "0") || 0, fill: getStyleValue(e, "fill"), ff: getStyleValue(e, "font-family"), text: glyphText(e) }))
     .sort((p, q) => (p.x * cF + p.y * sF) - (q.x * cF + q.y * sF)); // reading order along the rotated +x axis
 
   const x0 = frags[0].x, y0 = frags[0].y;
@@ -874,6 +874,7 @@ export function mergeTextFragments(svg: string, scids: string[]): string {
   // superscripts use a RELATIVE size, so "unify typography" scales the whole title.
   setStyleValue(merged, "font-size", `${round(mainFs)}px`);
   const baseFill = getStyleValue(first, "fill");
+  const baseFF = getStyleValue(first, "font-family");
   for (const f of frags) {
     const tspan = doc.createElementNS(NS, "tspan");
     if (f.fs < 0.85 * mainFs) {
@@ -884,6 +885,11 @@ export function mergeTextFragments(svg: string, scids: string[]): string {
       setStyleValue(tspan, "font-size", `${round((f.fs / mainFs) * 100)}%`);
     }
     if (f.fill && f.fill !== baseFill) setStyleValue(tspan, "fill", f.fill);
+    // Preserve a per-fragment font: Origin renders Greek letters in the Symbol font
+    // (the char is a Latin letter the Symbol font maps to a Greek glyph — "m"→μ,
+    // "l"→λ, "s"→σ). Without carrying its font-family the piece inherits the title's
+    // Arial and turns back into a Latin letter.
+    if (f.ff && f.ff !== baseFF) setStyleValue(tspan, "font-family", f.ff);
     tspan.textContent = f.text;
     merged.appendChild(tspan);
   }
