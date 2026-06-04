@@ -112,7 +112,7 @@ export interface DataSeries {
 export type PanelMode = "full" | "layout-only" | "image";
 
 export interface ImportWarning {
-  kind: "text-as-path" | "bitmap" | "color-scale" | "parse";
+  kind: "text-as-path" | "bitmap" | "color-scale" | "parse" | "no-data";
   message: string;
 }
 

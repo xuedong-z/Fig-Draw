@@ -504,7 +504,30 @@ export function parseSvgString(raw: string, sourceName = "figure"): ParseResult 
     }
 
     // ---- Module D1: role recognition -----------------------------------
-    assignRoles(elements);
+    const ctx = assignRoles(elements);
+    // Origin bars vs scatter markers share the `Plot{N}` scope; a bar is anchored to
+    // the axis baseline, a scatter symbol floats. With the plot box now known, promote
+    // a group of "scatter" elements to "data" (a bar/column row) when most of the group
+    // sits on the plot baseline — so dense / short bars aren't mistaken for markers. A
+    // scatter cloud (few on the baseline) is left untouched.
+    if (origin) {
+      const baseY = ctx.plot.y + ctx.plot.h;
+      const tolY = Math.max(2, ctx.plot.h * 0.02);
+      const onBaseline = (e: ParsedElement) =>
+        (e.tag === "rect" || e.tag === "polygon") && Math.abs(e.bbox.y + e.bbox.h - baseY) <= tolY;
+      const groups = new Map<string, ParsedElement[]>();
+      for (const e of elements) {
+        if (e.role !== "scatter") continue;
+        const arr = groups.get(e.groupKey) ?? [];
+        arr.push(e);
+        groups.set(e.groupKey, arr);
+      }
+      for (const arr of groups.values()) {
+        if (arr.length >= 2 && arr.filter(onBaseline).length >= arr.length * 0.5) {
+          for (const e of arr) e.role = "data";
+        }
+      }
+    }
     for (const e of elements) {
       const node = nodeByScid.get(e.scid);
       if (node) node.setAttribute("data-scrole", e.role);
@@ -524,6 +547,18 @@ export function parseSvgString(raw: string, sourceName = "figure"): ParseResult 
     if (origin) {
       refineOriginLegendRoles(elements, series);
       for (const e of elements) nodeByScid.get(e.scid)?.setAttribute("data-scrole", e.role);
+    }
+
+    // An Origin chart with axes but NO recognized data series means Origin omitted the
+    // data glyphs from the SVG — box / stacked-column / error-bar / heatmap / pie plots
+    // export only their axes + labels + legend. Tell the user instead of silently
+    // importing an empty plot.
+    if (origin && series.length === 0 && elements.some((e) => e.role === "axis" || e.role === "tick")) {
+      warnings.push({
+        kind: "no-data",
+        message:
+          "No data series were found — Origin doesn't export the data glyphs for box / stacked-column / error-bar / heatmap / pie plots (only the axes survive). Re-export this graph as a line / scatter / column plot, or export it as a PNG image instead."
+      });
     }
 
     pairLegends(series, elements);
