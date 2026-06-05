@@ -1,7 +1,8 @@
 /**
  * Guided-tour steps — selector-anchored, bilingual. Consumed by Tour.tsx, which
  * drives driver.js with the current language. Anchors are `data-tour` attributes on
- * real UI elements; a step whose anchor isn't in the DOM is skipped.
+ * real UI elements; a step whose anchor isn't in the DOM is skipped. The script walks
+ * the user through one full end-to-end workflow.
  */
 export interface TourStep {
   selector: string;
@@ -13,71 +14,81 @@ export interface TourStep {
 
 export const TOUR_STEPS: TourStep[] = [
   {
-    selector: '[data-tour="import"]',
-    title: { en: "1. Import your figures", zh: "1. 导入你的图" },
-    body: {
-      en: "Bring in the SVGs you exported from Origin, matplotlib, Prism… (or drag them onto the canvas). Images work too.",
-      zh: "导入你从 Origin、matplotlib、Prism 等导出的 SVG(也可直接拖到画布上),图片也行。"
-    },
-    side: "bottom",
-    align: "start"
-  },
-  {
     selector: '[data-tour="examples"]',
-    title: { en: "2. Or try an example", zh: "2. 或试个示例" },
+    title: { en: "1. Import figures", zh: "1. 导入图片" },
     body: {
-      en: "No file handy? Load a bundled sample to explore everything first.",
-      zh: "没有文件?先加载一个内置示例来体验所有功能。"
+      en: "Start here — load a bundled example set (or use Import for your own SVG / PNG figures).",
+      zh: "从这里开始 —— 加载一组内置示例图(或用「导入」放你自己的 SVG / PNG)。"
     },
     side: "bottom",
     align: "start"
   },
   {
     selector: '[data-tour="layout"]',
-    title: { en: "3. Arrange panels", zh: "3. 排版面板" },
+    title: { en: "2. Auto-arrange (3×3)", zh: "2. 自动排版 (3×3)" },
     body: {
-      en: "Each figure is a panel. Use grid presets or free-place, set gaps, and reorder — they auto-label (a)(b)(c).",
-      zh: "每张图是一个面板。用网格预设或自由摆放、设间距、重排序 —— 会自动编号 (a)(b)(c)。"
+      en: "Click the 3×3 grid preset — every panel snaps into a tidy grid and the layout locks.",
+      zh: "点 3×3 网格预设,所有面板自动排成整齐网格并锁定。"
     },
     side: "right",
     align: "start"
   },
   {
-    selector: '[data-tour="tabs"]',
-    title: { en: "4. Edit by object", zh: "4. 按对象编辑" },
+    selector: '[data-tour="layout"]',
+    title: { en: "3. Resize a panel", zh: "3. 调整尺寸" },
     body: {
-      en: "Tabs are grouped by target: Axis, Content (data & color), Legend, Typography, Tune (any element), Export.",
-      zh: "tab 按对象分组:坐标轴、内容(数据与配色)、图例、字体、微调(任意元素)、导出。"
+      en: "Click Free to unlock, then drag the last panel taller — across two rows. Notice figsize keeps its fonts & line widths constant.",
+      zh: "点「自由」解锁,然后把最后一张图拖高、跨两行 —— 注意 figsize 让字号和线宽保持不变。"
+    },
+    side: "right",
+    align: "center"
+  },
+  {
+    selector: '[data-tour="tabs"]',
+    title: { en: "4. Axis", zh: "4. 坐标轴" },
+    body: {
+      en: "Open the Axis tab: set a half frame, ticks outward, tweak the axis & tick sizes, then click Apply.",
+      zh: "打开坐标轴 tab:设半框、刻度朝外,调坐标轴和刻度尺寸,然后点「应用」。"
     },
     side: "left",
     align: "start"
   },
   {
-    selector: '[data-tour="canvas"]',
-    title: { en: "5. The page preview", zh: "5. 页面预览" },
+    selector: '[data-tour="tabs"]',
+    title: { en: "5. Typography", zh: "5. 字体" },
     body: {
-      en: "Your figure on a realistic journal page. Click an element to edit it; drag panels to move or resize.",
-      zh: "你的图呈现在仿真期刊页上。点元素即可编辑;拖动面板来移动或缩放。"
+      en: "Open the Typography tab and click Apply — fonts & line weights normalize across every panel.",
+      zh: "打开字体 tab,点「应用」—— 字号和线宽统一到每个面板。"
     },
     side: "left",
-    align: "center"
+    align: "start"
+  },
+  {
+    selector: '[data-tour="tabs"]',
+    title: { en: "6. Content & color", zh: "6. 内容配色" },
+    body: {
+      en: "Open the Content tab and pick a palette — every data series recolors in order.",
+      zh: "打开内容 tab,选一个色卡 —— 所有数据系列按顺序重新着色。"
+    },
+    side: "left",
+    align: "start"
+  },
+  {
+    selector: '[data-tour="trim"]',
+    title: { en: "7. Trim & tidy", zh: "7. 裁剪整理" },
+    body: {
+      en: "Click Trim to crop edge whitespace on every panel, then re-apply the 3×3 grid to tidy the layout back up.",
+      zh: "点 Trim 裁掉每个面板的边缘空白,再点一次 3×3 网格让布局回到整齐。"
+    },
+    side: "bottom",
+    align: "start"
   },
   {
     selector: '[data-tour="export"]',
-    title: { en: "6. Export", zh: "6. 导出" },
+    title: { en: "8. Export", zh: "8. 导出" },
     body: {
-      en: "Export a submission-ready PNG (300–1200 DPI) or a re-editable SVG at journal widths.",
-      zh: "导出投稿级 PNG(300–1200 DPI)或期刊宽度的可再编辑 SVG。"
-    },
-    side: "bottom",
-    align: "end"
-  },
-  {
-    selector: '[data-tour="help"]',
-    title: { en: "Find help anytime", zh: "随时查帮助" },
-    body: {
-      en: "Reopen this manual from the ? button whenever you need it. Enjoy!",
-      zh: "随时点 ? 按钮重新打开手册。开始吧!"
+      en: "Pick a journal width + DPI and export a submission-ready PNG, or a re-editable SVG. Done!",
+      zh: "选期刊宽度和 DPI,导出投稿级 PNG,或可再编辑的 SVG。完成!"
     },
     side: "bottom",
     align: "end"

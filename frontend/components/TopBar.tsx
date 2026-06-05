@@ -67,6 +67,7 @@ export function TopBar() {
         onClick={cropAll}
         disabled={panelCount === 0}
         title={t("tip.trim")}
+        data-tour="trim"
       >
         <Scissors size={15} /> {t("act.trim")}
       </button>

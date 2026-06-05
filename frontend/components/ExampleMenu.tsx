@@ -8,18 +8,19 @@ import { EXAMPLES, loadExample } from "@/lib/examples";
 
 export function ExampleMenu() {
   const importSvg = useStore((s) => s.importSvg);
+  const importImage = useStore((s) => s.importImage);
   const t = useT();
   const [open, setOpen] = useState(false);
 
   const loadOne = async (file: string) => {
     setOpen(false);
     const ex = EXAMPLES.find((e) => e.file === file);
-    if (ex) await loadExample(ex, importSvg);
+    if (ex) await loadExample(ex, importSvg, importImage);
   };
 
   const loadAll = async () => {
     setOpen(false);
-    for (const ex of EXAMPLES) await loadExample(ex, importSvg);
+    for (const ex of EXAMPLES) await loadExample(ex, importSvg, importImage);
   };
 
   return (

@@ -225,6 +225,7 @@ interface AppState {
   setMarkerSize: (panelId: string, scid: string, r: number) => void;
   setElementGradient: (panelId: string, scid: string, from: string, to: string) => void;
   moveAxisLabel: (panelId: string, scid: string, opts: { center?: boolean; nudge?: number }) => void;
+  nudgeElements: (panelId: string, scids: string[], dx: number, dy: number) => void;
   setPageWidthMm: (mm: number) => void;
   setCaption: (text: string) => void;
   setExport: (patch: Partial<ExportSettings>) => void;
@@ -434,6 +435,28 @@ function reflow(panels: Panel[], pageWidthMm: number, gutterMm: number): Panel[]
     // plot from getBBox each resize — the latter jitters and accumulates drift.
     return { ...reparsePanel({ ...p, ...r }, out.svg), plot: out.plot };
   });
+}
+
+/** Re-place panels into a `cols`-column grid using each panel's CURRENT size + the
+ * given gap, so changing the gap preserves manual sizes (only x/y move). Row height
+ * follows the tallest panel in that row. */
+function repositionGrid(panels: Panel[], cols: number, gap: number): Panel[] {
+  const ordered = [...panels].sort((a, b) => a.order - b.order);
+  const pos = new Map<string, { x: number; y: number }>();
+  let rowTop = 0;
+  let rowMaxH = 0;
+  let x = 0;
+  ordered.forEach((p, i) => {
+    if (i % cols === 0) {
+      if (i > 0) rowTop += rowMaxH + gap;
+      x = 0;
+      rowMaxH = 0;
+    }
+    pos.set(p.id, { x, y: rowTop });
+    x += p.w + gap;
+    rowMaxH = Math.max(rowMaxH, p.h);
+  });
+  return panels.map((p) => ({ ...p, ...(pos.get(p.id) ?? {}) }));
 }
 
 /** Merge freshly aggregated series with previous ones, preserving user edits. */
@@ -1419,9 +1442,12 @@ export const useStore = create<AppState>((set, get) => ({
   setLayoutLocked: (locked) => set({ layoutLocked: locked }),
 
   setGridGap: (px) => {
-    set({ gridGap: px });
-    // re-flow the current grid with the new gap (keeps columns + locked state)
-    if (get().gridCols > 0) get().applyGrid(get().gridCols);
+    // change the gap and re-space the grid WITHOUT resetting manual panel sizes
+    // (applyGrid would snap every panel back to the cell size — the reported bug).
+    set((s) => ({
+      gridGap: px,
+      panels: s.gridCols > 0 ? repositionGrid(s.panels, s.gridCols, px) : s.panels
+    }));
   },
 
   moveAxisLabel: (panelId, scid, opts) => {
@@ -1433,6 +1459,14 @@ export const useStore = create<AppState>((set, get) => ({
         const svg = opts.center ? centerTitles(p, [scid]) : moveAxisLabelSvg(p.svg, scid, p.plot, opts);
         return svg === p.svg ? p : { ...reparsePanel(p, svg), plot: p.plot };
       })
+    }));
+  },
+
+  nudgeElements: (panelId, scids, dx, dy) => {
+    if (!scids.length) return;
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) => (p.id === panelId ? reparsePanel(p, shiftElementsSvg(p.svg, scids, dx, dy)) : p))
     }));
   },
 
