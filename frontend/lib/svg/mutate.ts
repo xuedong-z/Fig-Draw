@@ -796,6 +796,30 @@ export function setTextPivot(
 
 /** Translate text elements by a PER-ELEMENT (dx, dy), in one pass. Used by the
  * bbox-based gap controls (each label/title moved by its own visual offset). */
+/** Translate whole elements by (dx, dy) regardless of geometry — accumulates a leading
+ * translate() so it works for <polyline>/<polygon>/<rect>/<text>/<circle>/<path> alike
+ * (a legend's swatch + label move together). reparse picks up new positions via
+ * getBBox/getCTM. Unlike shiftEach (x/y only, for axis labels), this moves point-based
+ * shapes too. */
+export function nudgeElements(svg: string, scids: string[], dx: number, dy: number): string {
+  if (dx === 0 && dy === 0) return svg;
+  const { root, serialize } = openDoc(svg);
+  for (const scid of scids) {
+    const el = byScid(root, scid);
+    if (!el) continue;
+    const cur = (el.getAttribute("transform") ?? "").trim();
+    const m = cur.match(/^translate\(\s*(-?[\d.]+)(?:[ ,]+(-?[\d.]+))?\s*\)(.*)$/i);
+    if (m) {
+      const nx = parseFloat(m[1]) + dx;
+      const ny = (m[2] ? parseFloat(m[2]) : 0) + dy;
+      el.setAttribute("transform", `translate(${round(nx)} ${round(ny)})${m[3]}`);
+    } else {
+      el.setAttribute("transform", `translate(${round(dx)} ${round(dy)})${cur ? " " + cur : ""}`);
+    }
+  }
+  return serialize();
+}
+
 export function shiftEach(svg: string, moves: { scid: string; dx: number; dy: number }[]): string {
   const { root, serialize } = openDoc(svg);
   for (const { scid, dx, dy } of moves) {

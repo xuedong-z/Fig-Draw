@@ -66,7 +66,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
   },
   {
     id: "content",
-    title: { en: "Content", zh: "内容" },
+    title: { en: "Palette", zh: "调色" },
     body: {
       en: [
         "The Content tab is everything about the plotted data.",

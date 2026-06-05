@@ -37,8 +37,8 @@ export const TOUR_STEPS: TourStep[] = [
     selector: '[data-tour="layout"]',
     title: { en: "3. Resize a panel", zh: "3. 调整尺寸" },
     body: {
-      en: "Click Free to unlock, then drag the last panel taller — across two rows. Notice figsize keeps its fonts & line widths constant.",
-      zh: "点「自由」解锁,然后把最后一张图拖高、跨两行 —— 注意 figsize 让字号和线宽保持不变。"
+      en: "Click the lock to switch to Free mode, select the last panel, then change its size in the Selected size fields. Notice figsize keeps fonts & line widths constant.",
+      zh: "点「已锁定」切换到自由模式,选中最后一张图,在「尺寸」里随意修改。注意 figsize 让字号和线宽保持不变。"
     },
     side: "right",
     align: "center"
@@ -77,8 +77,8 @@ export const TOUR_STEPS: TourStep[] = [
     selector: '[data-tour="trim"]',
     title: { en: "7. Trim & tidy", zh: "7. 裁剪整理" },
     body: {
-      en: "Click Trim to crop edge whitespace on every panel, then re-apply the 3×3 grid to tidy the layout back up.",
-      zh: "点 Trim 裁掉每个面板的边缘空白,再点一次 3×3 网格让布局回到整齐。"
+      en: "Click Trim to crop edge whitespace on every panel. Tip: after trimming, hit the 3×3 grid again to tidy the layout back up.",
+      zh: "点 Trim 裁掉每个面板的边缘空白。提示:裁剪之后,记得再点一次 3×3 网格恢复整齐布局。"
     },
     side: "bottom",
     align: "start"
