@@ -709,6 +709,7 @@ export function aggregateSeries(elements: ParsedElement[]): DataSeries[] {
       emphasis: "normal",
       label: null,
       legendElementId: null,
+      legendTextId: null,
       hasMarker: members.some((m) => m.hasMarker),
       isFill,
       gradientId,
@@ -754,6 +755,7 @@ function pairLegends(series: DataSeries[], elements: ParsedElement[]): void {
       usedTexts.add(nearestText.scid);
       s.label = (nearestText.text ?? "").trim() || null;
       s.legendElementId = swatch.scid;
+      s.legendTextId = nearestText.scid;
     }
   }
 }

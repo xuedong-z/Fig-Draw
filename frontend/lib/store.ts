@@ -120,7 +120,7 @@ interface DocSnapshot {
   gridGap: number;
 }
 
-export type RightTab = "palette" | "axis" | "emphasis" | "type" | "tune" | "export";
+export type RightTab = "axis" | "content" | "legend" | "type" | "tune" | "export";
 export type AlignKind = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
 
 interface AppState {
@@ -437,7 +437,7 @@ function mergeSeries(oldSeries: DataSeries[], fresh: DataSeries[]): DataSeries[]
   return fresh.map((s) => {
     const prev = byId.get(s.id);
     if (!prev) return s;
-    return { ...s, emphasis: prev.emphasis, label: prev.label ?? s.label, order: prev.order };
+    return { ...s, emphasis: prev.emphasis, label: prev.label ?? s.label, legendTextId: prev.legendTextId ?? s.legendTextId, order: prev.order };
   });
 }
 
@@ -707,7 +707,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedPanelId: null,
   selectedPanelIds: [],
   selectedElementId: null,
-  rightTab: "palette",
+  rightTab: "content",
   showGrid: true,
   snapEnabled: true,
   lang: "en", // hydrated from localStorage on the client (see Editor.tsx)
