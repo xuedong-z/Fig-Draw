@@ -8,14 +8,15 @@ export interface Example {
 }
 
 export const EXAMPLES: Example[] = [
-  { file: "origin_line.svg", name: "Line plot", desc: "Origin · 3 lines + legend" },
   { file: "origin_scatter.svg", name: "Scatter", desc: "Origin · 3 clusters + legend" },
   { file: "origin_column.svg", name: "Bar chart", desc: "Origin · grouped columns" },
   { file: "origin_area.svg", name: "Stacked area", desc: "Origin · 3 stacked areas" },
   { file: "origin_doubleY.svg", name: "Double-Y", desc: "Origin · dual axes" },
   { file: "origin_spectra.svg", name: "XRD spectra", desc: "Origin · 4 stacked spectra" },
   { file: "em_micrograph.png", name: "Micrograph", desc: "PNG · electron micrograph" },
-  { file: "schematic.png", name: "Schematic", desc: "PNG · mechanism diagram" }
+  { file: "schematic.png", name: "Schematic", desc: "PNG · mechanism diagram" },
+  // line plot last — the tour's "resize the last panel" step uses it (figsize is clearest on a line plot)
+  { file: "origin_line.svg", name: "Line plot", desc: "Origin · 3 lines + legend" }
 ];
 
 /** Fetch a bundled sample and import it — SVGs go through importSvg, raster images

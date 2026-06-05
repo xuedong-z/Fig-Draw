@@ -6,7 +6,6 @@ import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { palettesByCategory, CATEGORY_ORDER, findPalette } from "@/lib/palettes";
 import type { Emphasis, PaletteCategory } from "@/lib/types";
-import { NumRow, NATURE_PRESET } from "./_shared";
 
 /** Emphasis levels (merged in from the old EmphasisPanel). */
 const LEVELS: { id: Emphasis; tkey: string; hintKey: string }[] = [
@@ -34,8 +33,6 @@ export function ContentPanel() {
   const applyPalette = useStore((s) => s.applyPalette);
   const recolorSeries = useStore((s) => s.recolorSeries);
   const setSeriesEmphasis = useStore((s) => s.setSeriesEmphasis);
-  const typography = useStore((s) => s.typography);
-  const setTypography = useStore((s) => s.setTypography);
   const panels = useStore((s) => s.panels);
   const selectedPanelId = useStore((s) => s.selectedPanelId);
 
@@ -92,20 +89,8 @@ export function ContentPanel() {
         );
       })}
 
-      {/* data line width (global; applied on Typography → Unify) */}
-      <div className="mt-2 border-t border-line pt-3">
-        <NumRow
-          label={t("type.dataLine")}
-          value={typography.dataLineWidthPt}
-          step={0.1}
-          hint={`${NATURE_PRESET.dataLineWidthPt}`}
-          onChange={(v) => setTypography({ dataLineWidthPt: v })}
-        />
-        <p className="mt-1 text-[10px] text-faint">{t("content.lineHint")}</p>
-      </div>
-
       {/* per-series: color + emphasis */}
-      <div className="mt-3 border-t border-line pt-3">
+      <div className="mt-2 border-t border-line pt-3">
         <div className="field-label mb-2">
           {t("color.perSeries")} {selectedPanel ? `· ${selectedPanel.label}` : ""}
         </div>

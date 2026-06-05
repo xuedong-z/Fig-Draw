@@ -39,7 +39,7 @@ const STRINGS = {
   // ── Right sidebar tabs ──────────────────────────────────────────────
   "tab.color": { en: "Color", zh: "配色" },
   "tab.axis": { en: "Axis", zh: "坐标轴" },
-  "tab.content": { en: "Content", zh: "内容" },
+  "tab.content": { en: "Palette", zh: "调色" },
   "tab.legend": { en: "Legend", zh: "图例" },
   "tab.type": { en: "Type", zh: "字体" },
   "tab.emphasis": { en: "Emphasis", zh: "强调" },
@@ -141,7 +141,7 @@ const STRINGS = {
   // ── Palette panel ───────────────────────────────────────────────────
   "color.library": { en: "Color library", zh: "配色库" },
   "color.desc": { en: "Click a palette to recolor every panel’s data series in order. Structure (axes, ticks, text) is left untouched.", zh: "点击调色板，按顺序为每个面板的数据系列重新着色。结构（坐标轴、刻度、文字）保持不变。" },
-  "content.title": { en: "Content & color", zh: "内容与配色" },
+  "content.title": { en: "Palette & color", zh: "调色" },
   "content.lineHint": { en: "Data line width · figure-wide; Apply on the Typography tab", zh: "数据线宽 · 全局；在 字体 tab 点「应用」" },
   "legend.title": { en: "Legend", zh: "图例" },
   "legend.desc": { en: "Recolor, rename or hide each legend entry.", zh: "为每个图例项改色、改名或隐藏。" },

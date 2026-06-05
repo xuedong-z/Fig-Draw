@@ -77,39 +77,42 @@ export function TunePanel() {
   }, [selectedElementId, selectedPanelId]);
 
   if (!panel) return <div className="p-3 text-2xs text-faint">{t("tune.pickPanelEl")}</div>;
+
+  // Element picker — kept visible whether or not an element is selected, so the user
+  // can switch elements without first deselecting.
+  const rank: Record<string, number> = {
+    data: 0, fit: 1, scatter: 2, errorbar: 3, auxiliary: 4, legend: 5,
+    "text-axis": 6, "text-title": 7, "text-tick": 8, "text-legend": 9,
+    axis: 10, tick: 11, grid: 12, decoration: 20, unknown: 21, background: 99
+  };
+  const pickItems = [...panel.elements]
+    .filter((e) => e.role !== "background")
+    .sort((a, b) => (rank[a.role] ?? 50) - (rank[b.role] ?? 50));
+  const picker = (
+    <>
+      <label className="field-label">{t("tune.pickEl")}</label>
+      <select
+        className="input-dark mb-2 w-full"
+        value={selectedElementId ?? ""}
+        onChange={(e) => selectElement(e.target.value || null)}
+      >
+        <option value="">{t("tune.pickElPlaceholder")}</option>
+        {pickItems.map((e) => (
+          <option key={e.scid} value={e.scid}>
+            {t(`role.${e.role}`)}
+            {e.text ? ` · "${e.text.slice(0, 16)}"` : e.stroke && e.stroke !== "none" ? ` · ${e.stroke}` : e.fill && e.fill !== "none" ? ` · ${e.fill}` : ""}
+            {e.hidden ? ` · ${t("tune.hidden")}` : ""}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+
   if (!el) {
-    const rank: Record<string, number> = {
-      data: 0, fit: 1, scatter: 2, errorbar: 3, auxiliary: 4, legend: 5,
-      "text-axis": 6, "text-title": 7, "text-tick": 8, "text-legend": 9,
-      axis: 10, tick: 11, grid: 12, decoration: 20, unknown: 21, background: 99
-    };
-    const items = [...panel.elements]
-      .filter((e) => e.role !== "background")
-      .sort((a, b) => (rank[a.role] ?? 50) - (rank[b.role] ?? 50));
     return (
       <div className="p-3">
         <div className="panel-title mb-2">{t("tune.editEl")} · {panel.label}</div>
-        <label className="field-label">{t("tune.pickEl")}</label>
-        <select
-          className="input-dark mb-2 w-full"
-          value=""
-          onChange={(e) => e.target.value && selectElement(e.target.value)}
-        >
-          <option value="">{t("tune.pickElPlaceholder")}</option>
-          {items.map((e) => (
-            <option key={e.scid} value={e.scid}>
-              {t(`role.${e.role}`)}
-              {e.text
-                ? ` · "${e.text.slice(0, 16)}"`
-                : e.stroke && e.stroke !== "none"
-                  ? ` · ${e.stroke}`
-                  : e.fill && e.fill !== "none"
-                    ? ` · ${e.fill}`
-                    : ""}
-              {e.hidden ? ` · ${t("tune.hidden")}` : ""}
-            </option>
-          ))}
-        </select>
+        {picker}
         <p className="text-2xs text-faint">{t("tune.orClick")}</p>
       </div>
     );
@@ -144,7 +147,8 @@ export function TunePanel() {
 
   return (
     <div className="p-3">
-      <div className="panel-title mb-1">{t("tune.editEl")}</div>
+      <div className="panel-title mb-2">{t("tune.editEl")} · {panel.label}</div>
+      {picker}
       <div className="mb-3 truncate text-2xs text-faint">
         {t(`role.${el.role}`)} · {el.tag}
         {el.text ? ` · "${el.text.slice(0, 16)}"` : ""}

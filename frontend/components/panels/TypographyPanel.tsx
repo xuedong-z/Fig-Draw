@@ -50,6 +50,11 @@ export function TypographyPanel() {
         <NumRow label={t("type.legend")} value={typography.legendPt} hint={`${NATURE_PRESET.legendPt}`} onChange={(v) => up("legendPt", v)} />
       </div>
 
+      <div className="field-label mb-1">{t("type.lineWidth")}</div>
+      <div className="mb-3 flex flex-col gap-1.5">
+        <NumRow label={t("type.dataLine")} value={typography.dataLineWidthPt} step={0.1} hint={`${NATURE_PRESET.dataLineWidthPt}`} onChange={(v) => up("dataLineWidthPt", v)} />
+      </div>
+
       <div className="flex gap-2">
         <button
           className="tool-btn justify-center px-2"

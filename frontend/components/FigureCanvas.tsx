@@ -74,7 +74,7 @@ export function FigureCanvas() {
   const figH = useMemo(() => {
     let maxB = 0;
     for (const p of panels) maxB = Math.max(maxB, p.y + p.h);
-    return Math.max(280, Math.ceil(maxB) + 80);
+    return Math.max(280, Math.ceil(maxB) + 10);
   }, [panels]);
 
   const hostRef = useRef<HTMLDivElement>(null);
@@ -482,8 +482,11 @@ export function FigureCanvas() {
                   fontSize: labelPx,
                   fontWeight: labelStyle.bold ? 700 : 400,
                   color: labelStyle.color,
-                  background: labelStyle.whiteBacking ? "rgba(255,255,255,0.85)" : "transparent",
-                  padding: labelStyle.whiteBacking ? "0 2px" : 0
+                  // image panels fill to the corner (slice), so always give their label a
+                  // backing chip — otherwise the black (a)/(b) sits on the photo and reads
+                  // as part of the image.
+                  background: labelStyle.whiteBacking || p.mode === "image" ? "rgba(255,255,255,0.85)" : "transparent",
+                  padding: labelStyle.whiteBacking || p.mode === "image" ? "0 2px" : 0
                 }}
               >
                 {p.label}

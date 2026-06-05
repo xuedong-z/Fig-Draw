@@ -30,6 +30,8 @@ export function NaturePage() {
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const figW = pageWidthMm * FIG_PX_PER_MM;
   const pagePadding = 52;
+  // single-column page (≤100mm) → single-column body text; double / PPT → two columns
+  const cols = pageWidthMm <= 100 ? "columns-1" : "columns-2";
 
   return (
     <div className="flex min-h-full justify-center px-8 py-10">
@@ -50,8 +52,8 @@ export function NaturePage() {
           A. Researcher, B. Coauthor &amp; C. Principal · Department of Materials Science
         </p>
 
-        {/* body text: two-column journal layout, gently blurred so the figure stays the focus */}
-        <div className="mb-1 columns-2 gap-6 blur-[1.2px]">
+        {/* body text: column count follows the page width, gently blurred so the figure stays the focus */}
+        <div className={`mb-1 ${cols} gap-6 blur-[1.2px]`}>
           <p className="body-col mb-3 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(7, 5)}</p>
           <p className="body-col text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(23, 4)}</p>
         </div>
@@ -65,7 +67,7 @@ export function NaturePage() {
           </figcaption>
         </figure>
 
-        <div className="mt-4 columns-2 gap-6 blur-[1.2px]">
+        <div className={`mt-4 ${cols} gap-6 blur-[1.2px]`}>
           <p className="body-col mb-3 text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(41, 5)}</p>
           <p className="body-col text-[13.5px] leading-[1.5] text-neutral-800">{fakeParagraph(58, 4)}</p>
         </div>

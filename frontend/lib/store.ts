@@ -50,6 +50,7 @@ import {
   setTickLength as setTickLengthSvg,
   moveAxisLabel as moveAxisLabelSvg,
   shiftElements as shiftElementsSvg,
+  nudgeElements as nudgeElementsSvg,
   shiftEach as shiftEachSvg,
   setTextPivot as setTextPivotSvg,
   mergeTextFragments as mergeTextFragmentsSvg,
@@ -1411,32 +1412,11 @@ export const useStore = create<AppState>((set, get) => ({
 
   applyGrid: (cols) => {
     get().snapshot();
-    set((s) => {
-      const ordered = [...s.panels].sort((a, b) => a.order - b.order);
-      const editable = ordered.filter((p) => p.mode === "full");
-      const g = s.gridGap;
-      const figW = s.pageWidthMm * FIG_PX_PER_MM;
-      const cellW = (figW - g * (cols - 1)) / cols;
-      const avgAspect = editable.length
-        ? editable.reduce((a, p) => a + (p.aspect || 1.4), 0) / editable.length
-        : 1.4;
-      const cellH = cellW / avgAspect;
-      const byId = new Map<string, Panel>();
-      ordered.forEach((p, i) => {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const x = col * (cellW + g);
-        const y = row * (cellH + g);
-        if (p.mode !== "full" || (Math.abs(p.w - cellW) < 0.5 && Math.abs(p.h - cellH) < 0.5)) {
-          byId.set(p.id, { ...p, x, y, w: cellW, h: cellH });
-        } else {
-          const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, cellW, cellH);
-          byId.set(p.id, { ...reparsePanel({ ...p, x, y, w: cellW, h: cellH }, out.svg), plot: out.plot });
-        }
-      });
-      // a grid is the "regular" fixed layout — lock it; the user unlocks to free-place.
-      return { gridCols: cols, layoutLocked: true, panels: s.panels.map((p) => byId.get(p.id) ?? p) };
-    });
+    // Re-flow into `cols` columns but KEEP each panel's current size (only reposition):
+    // a grid no longer snaps panels back to a uniform cell, so manual / trimmed sizes
+    // survive — fixes the "grid snaps my resized panel back" report. On a fresh import
+    // panels already share a size, so this still yields a tidy grid. Lock the layout.
+    set((s) => ({ gridCols: cols, layoutLocked: true, panels: repositionGrid(s.panels, cols, s.gridGap) }));
   },
 
   setLayoutLocked: (locked) => set({ layoutLocked: locked }),
@@ -1466,7 +1446,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (!scids.length) return;
     get().snapshot();
     set((s) => ({
-      panels: s.panels.map((p) => (p.id === panelId ? reparsePanel(p, shiftElementsSvg(p.svg, scids, dx, dy)) : p))
+      panels: s.panels.map((p) => (p.id === panelId ? reparsePanel(p, nudgeElementsSvg(p.svg, scids, dx, dy)) : p))
     }));
   },
 
