@@ -1,6 +1,6 @@
 "use client";
 
-import { Eraser } from "lucide-react";
+import { Eraser, Wand2 } from "lucide-react";
 import { useStore, type AxisFrameStyle } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import type { TypographySettings } from "@/lib/types";
@@ -33,6 +33,7 @@ export function AxisPanel() {
   const setBackgroundTransparent = useStore((s) => s.setBackgroundTransparent);
   const typography = useStore((s) => s.typography);
   const setTypography = useStore((s) => s.setTypography);
+  const unifyTypography = useStore((s) => s.unifyTypography);
   const up = <K extends keyof TypographySettings>(k: K, v: TypographySettings[K]) =>
     setTypography({ [k]: v } as Partial<TypographySettings>);
 
@@ -146,6 +147,9 @@ export function AxisPanel() {
           <NumRow label={t("type.tick")} value={typography.tickLineWidthPt} step={0.1} hint={`${NATURE_PRESET.tickLineWidthPt}`} onChange={(v) => up("tickLineWidthPt", v)} />
         </div>
         <p className="mt-1 text-[10px] text-faint">{t("axis.sizesHint")}</p>
+        <button className="tool-btn tool-btn-primary mt-2 w-full justify-center" onClick={unifyTypography}>
+          <Wand2 size={14} /> {t("type.unify")}
+        </button>
       </div>
     </div>
   );

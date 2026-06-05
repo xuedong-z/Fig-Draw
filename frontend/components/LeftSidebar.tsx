@@ -21,7 +21,6 @@ export function LeftSidebar() {
   const removePanel = useStore((s) => s.removePanel);
   const reorderPanels = useStore((s) => s.reorderPanels);
   const autoCropPanel = useStore((s) => s.autoCropPanel);
-  const setPanelTickDirection = useStore((s) => s.setPanelTickDirection);
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const setPageWidthMm = useStore((s) => s.setPageWidthMm);
   const innerPad = useStore((s) => s.innerPad);
@@ -282,23 +281,6 @@ export function LeftSidebar() {
             >
               <Crop size={12} /> {t("act.autocropWs")}
             </button>
-            <div className="field-label mb-1 mt-2">{t("panel.ticks")}</div>
-            <div className="grid grid-cols-2 gap-1">
-              <button
-                className="chip justify-center"
-                onClick={() => setPanelTickDirection(selectedPanel.id, "in")}
-                title={t("tip.ticksInPanel")}
-              >
-                {t("act.inward")}
-              </button>
-              <button
-                className="chip justify-center"
-                onClick={() => setPanelTickDirection(selectedPanel.id, "out")}
-                title={t("tip.ticksOutPanel")}
-              >
-                {t("act.outward")}
-              </button>
-            </div>
           </div>
         )}
       </div>

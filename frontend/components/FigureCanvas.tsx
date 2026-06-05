@@ -417,7 +417,7 @@ export function FigureCanvas() {
               {EXAMPLES.map((ex) => (
                 <button
                   key={ex.file}
-                  onClick={() => loadExample(ex, useStore.getState().importSvg)}
+                  onClick={() => loadExample(ex, useStore.getState().importSvg, useStore.getState().importImage)}
                   title={ex.desc}
                   className="rounded-md border border-dashed border-line bg-control px-2 py-1 text-2xs text-muted transition-colors duration-100 ease-out hover:bg-hover hover:text-ink"
                 >

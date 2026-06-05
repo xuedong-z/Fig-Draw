@@ -54,12 +54,12 @@ export const HELP_CHAPTERS: HelpChapter[] = [
     body: {
       en: [
         "The Axis tab edits axes across all panels: frame style (full / half / none), tick direction & length, tick-mark visibility, and the distances from ticks and titles to the axis.",
-        "Axis & tick font sizes and line widths live here too. They are global values — edit them here, then hit Unify on the Typography tab to apply.",
+        "Axis & tick font sizes and line widths live here too — edit them, then click Apply to push them to every panel.",
         "'Center axis titles' re-centers each title along its axis."
       ],
       zh: [
         "坐标轴 tab 统一编辑所有面板的轴:边框样式(全框/半框/无)、刻度方向与长度、刻度线显隐,以及刻度、标题到轴的距离。",
-        "坐标轴与刻度的字号、线宽也在这里。它们是全局值 —— 在这里改好,再到「字体」tab 点「统一」生效。",
+        "坐标轴与刻度的字号、线宽也在这里 —— 改好后点「应用」推到每个面板。",
         "「轴标题居中」会让每个轴标题在其坐标轴上居中。"
       ]
     }
@@ -89,12 +89,12 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       en: [
         "The Legend tab lists each legend entry of the selected panel.",
         "Change a swatch color (the data series recolors with it), rename the label text, or hide an entry — the change is written straight back to the figure.",
-        "Legend font size is on the Typography tab; reposition individual items in Tune."
+        "Nudge an entry's position with the arrow buttons; legend font size is on the Typography tab."
       ],
       zh: [
         "图例 tab 列出选中面板的每个图例项。",
         "改色块颜色(数据系列会一起变)、改标签文字,或隐藏某项 —— 改动直接写回图里。",
-        "图例字号在「字体」tab;逐项移动位置在「微调」tab。"
+        "用箭头按钮微调每项位置;图例字号在「字体」tab。"
       ]
     }
   },
@@ -104,12 +104,12 @@ export const HELP_CHAPTERS: HelpChapter[] = [
     body: {
       en: [
         "Set the figure-wide font family, the title and legend sizes, and panel-label styling here.",
-        "Unify applies the typography — including the axis/tick sizes and line widths from the Axis & Content tabs — consistently to every panel, in points, so it matches the export.",
+        "Apply pushes the typography — including the axis/tick sizes and line widths from the Axis & Content tabs — consistently to every panel, in points, so it matches the export.",
         "Reset returns to Nature submission defaults (sans-serif, 5–7 pt, ≥0.25 pt lines)."
       ],
       zh: [
         "在这里设置整张图的字体、标题与图例字号,以及面板编号样式。",
-        "「统一」会把排版(包括坐标轴/内容 tab 里的轴刻度字号和线宽)以「磅(pt)」为单位一致地应用到每个面板,与导出一致。",
+        "「应用」会把排版(包括坐标轴/内容 tab 里的轴刻度字号和线宽)以「磅(pt)」为单位一致地推到每个面板,与导出一致。",
         "「重置」回到 Nature 投稿默认值(无衬线、5–7 pt、线宽 ≥0.25 pt)。"
       ]
     }
