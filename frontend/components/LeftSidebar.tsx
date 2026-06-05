@@ -51,7 +51,7 @@ export function LeftSidebar() {
   };
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-panel">
+    <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-panel" data-tour="layout">
       {/* Page & layout */}
       <div className="border-b border-line p-3">
         <div className="panel-title mb-2">{t("sec.page")}</div>

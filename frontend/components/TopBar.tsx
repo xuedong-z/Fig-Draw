@@ -38,7 +38,7 @@ export function TopBar() {
 
       <div className="h-5 w-px bg-line" />
 
-      <button className="tool-btn tool-btn-primary" onClick={() => fileRef.current?.click()}>
+      <button className="tool-btn tool-btn-primary" onClick={() => fileRef.current?.click()} data-tour="import">
         <Upload size={15} /> {t("act.import")}
       </button>
       <input
@@ -99,6 +99,7 @@ export function TopBar() {
         className="tool-btn tool-btn-primary"
         onClick={() => setRightTab("export")}
         disabled={panelCount === 0}
+        data-tour="export"
       >
         <Download size={15} /> {t("act.export")}
       </button>

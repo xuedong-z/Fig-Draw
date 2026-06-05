@@ -10,12 +10,14 @@ import { RightSidebar } from "./RightSidebar";
 import { NaturePage } from "./NaturePage";
 import { Messages } from "./Messages";
 import { HelpPanel } from "./HelpPanel";
+import { Tour } from "./Tour";
 
 export function Editor() {
   const undo = useStore((s) => s.undo);
   const redo = useStore((s) => s.redo);
   const setLang = useStore((s) => s.setLang);
   const hydrateDoc = useStore((s) => s.hydrateDoc);
+  const startTour = useStore((s) => s.startTour);
   const importSvg = useStore((s) => s.importSvg);
   const importImage = useStore((s) => s.importImage);
   const t = useT();
@@ -33,7 +35,16 @@ export function Editor() {
       /* storage blocked — keep default */
     }
     hydrateDoc();
-  }, [setLang, hydrateDoc]);
+    // first-run guided tour (UI-pref flag in localStorage, not document data)
+    try {
+      if (!window.localStorage.getItem("sc-tour-v1")) {
+        window.localStorage.setItem("sc-tour-v1", "1");
+        window.setTimeout(() => startTour(), 700); // let layout settle so anchors exist
+      }
+    } catch {
+      /* storage blocked — skip first-run tour */
+    }
+  }, [setLang, hydrateDoc, startTour]);
 
   // Stop the browser from navigating away (and losing the session) when a file is
   // dropped anywhere outside the editor drop zone.
@@ -75,6 +86,7 @@ export function Editor() {
       <div className="flex min-h-0 flex-1">
         <LeftSidebar />
         <main
+          data-tour="canvas"
           className="relative min-w-0 flex-1 overflow-auto bg-canvas"
           style={{
             backgroundImage: "radial-gradient(rgba(18,20,40,0.05) 1px, transparent 1px)",
@@ -110,6 +122,7 @@ export function Editor() {
         <RightSidebar />
       </div>
       <HelpPanel />
+      <Tour />
     </div>
   );
 }
