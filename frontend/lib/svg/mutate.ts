@@ -801,10 +801,10 @@ export function setTextPivot(
  * (a legend's swatch + label move together). reparse picks up new positions via
  * getBBox/getCTM. Unlike shiftEach (x/y only, for axis labels), this moves point-based
  * shapes too. */
-export function nudgeElements(svg: string, scids: string[], dx: number, dy: number): string {
-  if (dx === 0 && dy === 0) return svg;
+export function nudgeEach(svg: string, moves: { scid: string; dx: number; dy: number }[]): string {
   const { root, serialize } = openDoc(svg);
-  for (const scid of scids) {
+  for (const { scid, dx, dy } of moves) {
+    if (dx === 0 && dy === 0) continue;
     const el = byScid(root, scid);
     if (!el) continue;
     const cur = (el.getAttribute("transform") ?? "").trim();
@@ -818,6 +818,11 @@ export function nudgeElements(svg: string, scids: string[], dx: number, dy: numb
     }
   }
   return serialize();
+}
+
+export function nudgeElements(svg: string, scids: string[], dx: number, dy: number): string {
+  if (dx === 0 && dy === 0) return svg;
+  return nudgeEach(svg, scids.map((scid) => ({ scid, dx, dy })));
 }
 
 export function shiftEach(svg: string, moves: { scid: string; dx: number; dy: number }[]): string {

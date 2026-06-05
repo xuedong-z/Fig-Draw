@@ -51,6 +51,7 @@ import {
   moveAxisLabel as moveAxisLabelSvg,
   shiftElements as shiftElementsSvg,
   nudgeElements as nudgeElementsSvg,
+  nudgeEach as nudgeEachSvg,
   shiftEach as shiftEachSvg,
   setTextPivot as setTextPivotSvg,
   mergeTextFragments as mergeTextFragmentsSvg,
@@ -227,6 +228,7 @@ interface AppState {
   setElementGradient: (panelId: string, scid: string, from: string, to: string) => void;
   moveAxisLabel: (panelId: string, scid: string, opts: { center?: boolean; nudge?: number }) => void;
   nudgeElements: (panelId: string, scids: string[], dx: number, dy: number) => void;
+  setLegendSpacing: (panelId: string, delta: number) => void;
   setPageWidthMm: (mm: number) => void;
   setCaption: (text: string) => void;
   setExport: (patch: Partial<ExportSettings>) => void;
@@ -1447,6 +1449,30 @@ export const useStore = create<AppState>((set, get) => ({
     get().snapshot();
     set((s) => ({
       panels: s.panels.map((p) => (p.id === panelId ? reparsePanel(p, nudgeElementsSvg(p.svg, scids, dx, dy)) : p))
+    }));
+  },
+
+  setLegendSpacing: (panelId, delta) => {
+    get().snapshot();
+    set((s) => ({
+      panels: s.panels.map((p) => {
+        if (p.id !== panelId) return p;
+        const legendSeries = p.series.filter((se) => se.legendElementId);
+        if (legendSeries.length < 2) return p;
+        // order entries by swatch vertical position, then push the i-th entry by i*delta
+        // (so the spacing between consecutive entries changes by delta). The first stays put.
+        const withY = legendSeries
+          .map((se) => ({ se, y: p.elements.find((e) => e.scid === se.legendElementId)?.bbox.y ?? 0 }))
+          .sort((a, b) => a.y - b.y);
+        const moves: { scid: string; dx: number; dy: number }[] = [];
+        withY.forEach(({ se }, i) => {
+          const dy = i * delta;
+          if (dy === 0) return;
+          if (se.legendElementId) moves.push({ scid: se.legendElementId, dx: 0, dy });
+          if (se.legendTextId) moves.push({ scid: se.legendTextId, dx: 0, dy });
+        });
+        return moves.length ? reparsePanel(p, nudgeEachSvg(p.svg, moves)) : p;
+      })
     }));
   },
 
