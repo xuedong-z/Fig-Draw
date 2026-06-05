@@ -9,6 +9,7 @@ import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { NaturePage } from "./NaturePage";
 import { Messages } from "./Messages";
+import { HelpPanel } from "./HelpPanel";
 
 export function Editor() {
   const undo = useStore((s) => s.undo);
@@ -108,6 +109,7 @@ export function Editor() {
         </main>
         <RightSidebar />
       </div>
+      <HelpPanel />
     </div>
   );
 }

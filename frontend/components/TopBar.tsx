@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { Upload, Undo2, Redo2, Download, FlaskConical, Scissors, Languages } from "lucide-react";
+import { Upload, Undo2, Redo2, Download, FlaskConical, Scissors, Languages, CircleHelp } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { importFiles } from "@/lib/importFiles";
@@ -21,6 +21,7 @@ export function TopBar() {
   const panelCount = useStore((s) => s.panels.length);
   const lang = useStore((s) => s.lang);
   const setLang = useStore((s) => s.setLang);
+  const toggleHelp = useStore((s) => s.toggleHelp);
 
   const onFiles = async (files: FileList | null) => {
     await importFiles(files, { importSvg, importImage });
@@ -71,6 +72,10 @@ export function TopBar() {
       </button>
 
       <div className="ml-auto" />
+
+      <button className="tool-btn px-1.5" onClick={() => toggleHelp()} title={t("help.open")} data-tour="help">
+        <CircleHelp size={15} />
+      </button>
 
       {/* Language toggle — EN | 中 segmented switch */}
       <div className="flex items-center overflow-hidden rounded-md border border-line" title={t("tip.lang")}>

@@ -46,6 +46,16 @@ const STRINGS = {
   "tab.tune": { en: "Tune", zh: "微调" },
   "tab.export": { en: "Export", zh: "导出" },
 
+  // ── Help / manual / tour ────────────────────────────────────────────
+  "help.open": { en: "Help & manual", zh: "帮助与手册" },
+  "help.title": { en: "User manual", zh: "使用手册" },
+  "help.close": { en: "Close", zh: "关闭" },
+  "help.replayTour": { en: "Replay tour", zh: "重看引导" },
+  "tour.next": { en: "Next", zh: "下一步" },
+  "tour.prev": { en: "Back", zh: "上一步" },
+  "tour.done": { en: "Done", zh: "完成" },
+  "tour.skip": { en: "Skip", zh: "跳过" },
+
   // ── Left sidebar: page & layout ─────────────────────────────────────
   "sec.page": { en: "Page", zh: "页面" },
   "page.width": { en: "Page width", zh: "页面宽度" },
