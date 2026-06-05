@@ -440,26 +440,38 @@ function reflow(panels: Panel[], pageWidthMm: number, gutterMm: number): Panel[]
   });
 }
 
-/** Re-place panels into a `cols`-column grid using each panel's CURRENT size + the
- * given gap, so changing the gap preserves manual sizes (only x/y move). Row height
- * follows the tallest panel in that row. */
-function repositionGrid(panels: Panel[], cols: number, gap: number): Panel[] {
+/** Lay panels into a `cols`-column grid: each panel's WIDTH snaps to the cell width, its
+ * HEIGHT follows its own aspect (proportions never change — no stretch). Row height = the
+ * tallest panel in that row; shorter panels center vertically; a short last row centers
+ * horizontally. SVG panels rebuild via figsize (fonts/lines held); image panels just
+ * resize (aspect preserved → no distortion). */
+function gridLayout(panels: Panel[], cols: number, gap: number, pageWidthMm: number): Panel[] {
   const ordered = [...panels].sort((a, b) => a.order - b.order);
-  const pos = new Map<string, { x: number; y: number }>();
-  let rowTop = 0;
-  let rowMaxH = 0;
-  let x = 0;
-  ordered.forEach((p, i) => {
-    if (i % cols === 0) {
-      if (i > 0) rowTop += rowMaxH + gap;
-      x = 0;
-      rowMaxH = 0;
+  const figW = pageWidthMm * FIG_PX_PER_MM;
+  const cellW = (figW - gap * (cols - 1)) / cols;
+  const sized = ordered.map((p) => ({ p, w: cellW, h: cellW / (p.aspect || 1.4) }));
+  const fullRowW = cols * cellW + (cols - 1) * gap;
+  const rect = new Map<string, { x: number; y: number; w: number; h: number }>();
+  let y = 0;
+  for (let i = 0; i < sized.length; i += cols) {
+    const row = sized.slice(i, i + cols);
+    const rowH = Math.max(...row.map((it) => it.h));
+    const rowW = row.length * cellW + (row.length - 1) * gap;
+    const xOff = (fullRowW - rowW) / 2; // center a short (last) row
+    row.forEach((it, c) => {
+      rect.set(it.p.id, { x: xOff + c * (cellW + gap), y: y + (rowH - it.h) / 2, w: it.w, h: it.h });
+    });
+    y += rowH + gap;
+  }
+  return panels.map((p) => {
+    const r = rect.get(p.id);
+    if (!r) return p;
+    if (p.mode !== "full" || (Math.abs(p.w - r.w) < 0.5 && Math.abs(p.h - r.h) < 0.5)) {
+      return { ...p, ...r };
     }
-    pos.set(p.id, { x, y: rowTop });
-    x += p.w + gap;
-    rowMaxH = Math.max(rowMaxH, p.h);
+    const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, r.w, r.h);
+    return { ...reparsePanel({ ...p, ...r }, out.svg), plot: out.plot };
   });
-  return panels.map((p) => ({ ...p, ...(pos.get(p.id) ?? {}) }));
 }
 
 /** Merge freshly aggregated series with previous ones, preserving user edits. */
@@ -853,15 +865,18 @@ export const useStore = create<AppState>((set, get) => ({
   importImage: (name, dataUrl, iw, ih) => {
     get().snapshot();
     set((s) => {
-      const aspect = iw / ih || 1.4;
+      // pad the raster so it doesn't bleed to the panel edges — the same breathing room a
+      // plot has around its axes. The image sits centered inside a slightly larger viewBox
+      // (transparent margin), so panel labels and grid gaps read cleanly.
+      const pad = Math.round(Math.min(iw, ih) * 0.07);
+      const vbW = iw + pad * 2;
+      const vbH = ih + pad * 2;
+      const aspect = vbW / vbH || 1.4;
       const rect = placeNewPanel(s.panels, aspect, s.pageWidthMm, s.gutterMm);
-      // Wrap the raster in an SVG so it reuses the entire panel system (layout, grid,
-      // align, labels, export). "slice" = cover: resizing to a new aspect crops it
-      // (centered) instead of distorting — that's how cropping works for images.
       const svg =
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${iw}" height="${ih}" viewBox="0 0 ${iw} ${ih}" ` +
-        `preserveAspectRatio="xMidYMid slice"><image href="${dataUrl}" x="0" y="0" width="${iw}" height="${ih}" ` +
-        `preserveAspectRatio="xMidYMid slice"/></svg>`;
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${vbW}" height="${vbH}" viewBox="0 0 ${vbW} ${vbH}" ` +
+        `preserveAspectRatio="xMidYMid meet"><image href="${dataUrl}" x="${pad}" y="${pad}" width="${iw}" height="${ih}" ` +
+        `preserveAspectRatio="xMidYMid meet"/></svg>`;
       const panel: Panel = {
         id: `p${Date.now().toString(36)}_${s.panels.length}`,
         name,
@@ -1414,21 +1429,19 @@ export const useStore = create<AppState>((set, get) => ({
 
   applyGrid: (cols) => {
     get().snapshot();
-    // Re-flow into `cols` columns but KEEP each panel's current size (only reposition):
-    // a grid no longer snaps panels back to a uniform cell, so manual / trimmed sizes
-    // survive — fixes the "grid snaps my resized panel back" report. On a fresh import
-    // panels already share a size, so this still yields a tidy grid. Lock the layout.
-    set((s) => ({ gridCols: cols, layoutLocked: true, panels: repositionGrid(s.panels, cols, s.gridGap) }));
+    // Snap panels back into a tidy `cols`-column grid, keeping each panel's PROPORTIONS
+    // (width = cell width, height follows its aspect — never stretched). Short rows center
+    // horizontally; shorter panels center vertically in their row.
+    set((s) => ({ gridCols: cols, layoutLocked: true, panels: gridLayout(s.panels, cols, s.gridGap, s.pageWidthMm) }));
   },
 
   setLayoutLocked: (locked) => set({ layoutLocked: locked }),
 
   setGridGap: (px) => {
-    // change the gap and re-space the grid WITHOUT resetting manual panel sizes
-    // (applyGrid would snap every panel back to the cell size — the reported bug).
+    // re-grid with the new gap (no snapshot — the slider fires continuously)
     set((s) => ({
       gridGap: px,
-      panels: s.gridCols > 0 ? repositionGrid(s.panels, s.gridCols, px) : s.panels
+      panels: s.gridCols > 0 ? gridLayout(s.panels, s.gridCols, px, s.pageWidthMm) : s.panels
     }));
   },
 
