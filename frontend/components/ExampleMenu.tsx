@@ -24,7 +24,7 @@ export function ExampleMenu() {
 
   return (
     <div className="relative">
-      <button className="tool-btn" onClick={() => setOpen((o) => !o)} title={t("tip.examples")}>
+      <button className="tool-btn" onClick={() => setOpen((o) => !o)} title={t("tip.examples")} data-tour="examples">
         <Sparkles size={15} /> {t("act.examples")} <ChevronDown size={11} />
       </button>
       {open && (

@@ -120,7 +120,7 @@ interface DocSnapshot {
   gridGap: number;
 }
 
-export type RightTab = "palette" | "axis" | "emphasis" | "type" | "tune" | "export";
+export type RightTab = "axis" | "content" | "legend" | "type" | "tune" | "export";
 export type AlignKind = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
 
 interface AppState {
@@ -150,6 +150,8 @@ interface AppState {
   selectedPanelIds: string[]; // multi-select for align/distribute
   selectedElementId: string | null;
   rightTab: RightTab;
+  helpOpen: boolean; // user-manual modal (transient UI, not in history)
+  tourActive: boolean; // guided tour running (transient UI)
   showGrid: boolean;
   snapEnabled: boolean;
   lang: Lang;
@@ -172,6 +174,9 @@ interface AppState {
   applyElementStyleToRole: (panelId: string, scid: string) => void;
   selectElement: (id: string | null) => void;
   setRightTab: (t: RightTab) => void;
+  toggleHelp: (v?: boolean) => void;
+  startTour: () => void;
+  endTour: () => void;
   toggleGrid: () => void;
   toggleSnap: () => void;
   setLang: (l: Lang) => void;
@@ -437,7 +442,7 @@ function mergeSeries(oldSeries: DataSeries[], fresh: DataSeries[]): DataSeries[]
   return fresh.map((s) => {
     const prev = byId.get(s.id);
     if (!prev) return s;
-    return { ...s, emphasis: prev.emphasis, label: prev.label ?? s.label, order: prev.order };
+    return { ...s, emphasis: prev.emphasis, label: prev.label ?? s.label, legendTextId: prev.legendTextId ?? s.legendTextId, order: prev.order };
   });
 }
 
@@ -707,7 +712,9 @@ export const useStore = create<AppState>((set, get) => ({
   selectedPanelId: null,
   selectedPanelIds: [],
   selectedElementId: null,
-  rightTab: "palette",
+  rightTab: "content",
+  helpOpen: false,
+  tourActive: false,
   showGrid: true,
   snapEnabled: true,
   lang: "en", // hydrated from localStorage on the client (see Editor.tsx)
@@ -952,6 +959,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
   selectElement: (id) => set({ selectedElementId: id }),
   setRightTab: (t) => set({ rightTab: t }),
+  toggleHelp: (v) => set((s) => ({ helpOpen: typeof v === "boolean" ? v : !s.helpOpen })),
+  startTour: () => set({ tourActive: true, helpOpen: false }),
+  endTour: () => set({ tourActive: false }),
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
   toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
   setLang: (l) => {

@@ -104,6 +104,7 @@ export interface DataSeries {
   emphasis: Emphasis;
   label: string | null; // matched legend label
   legendElementId: string | null; // legend swatch element paired by color
+  legendTextId: string | null; // legend text element paired by proximity (editable label)
   hasMarker: boolean;
   isFill: boolean; // filled area/bar vs stroke line
   gradientId: string | null; // if filled by a gradient

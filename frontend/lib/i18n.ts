@@ -39,10 +39,22 @@ const STRINGS = {
   // ── Right sidebar tabs ──────────────────────────────────────────────
   "tab.color": { en: "Color", zh: "配色" },
   "tab.axis": { en: "Axis", zh: "坐标轴" },
+  "tab.content": { en: "Content", zh: "内容" },
+  "tab.legend": { en: "Legend", zh: "图例" },
   "tab.type": { en: "Type", zh: "字体" },
   "tab.emphasis": { en: "Emphasis", zh: "强调" },
   "tab.tune": { en: "Tune", zh: "微调" },
   "tab.export": { en: "Export", zh: "导出" },
+
+  // ── Help / manual / tour ────────────────────────────────────────────
+  "help.open": { en: "Help & manual", zh: "帮助与手册" },
+  "help.title": { en: "User manual", zh: "使用手册" },
+  "help.close": { en: "Close", zh: "关闭" },
+  "help.replayTour": { en: "Replay tour", zh: "重看引导" },
+  "tour.next": { en: "Next", zh: "下一步" },
+  "tour.prev": { en: "Back", zh: "上一步" },
+  "tour.done": { en: "Done", zh: "完成" },
+  "tour.skip": { en: "Skip", zh: "跳过" },
 
   // ── Left sidebar: page & layout ─────────────────────────────────────
   "sec.page": { en: "Page", zh: "页面" },
@@ -123,10 +135,19 @@ const STRINGS = {
   "tip.centerTitles": { en: "Center each axis title on its axis (all panels)", zh: "使每个轴标题在其坐标轴上居中（所有面板）" },
   "axis.transparentBg": { en: "Transparent background", zh: "透明背景" },
   "tip.transparentBg": { en: "Remove figure backgrounds (make transparent)", zh: "移除图表背景（设为透明）" },
+  "axis.sizes": { en: "Axis & tick sizes", zh: "坐标轴与刻度尺寸" },
+  "axis.sizesHint": { en: "Global · applied on Typography → Unify", zh: "全局 · 在 字体→统一 时应用" },
 
   // ── Palette panel ───────────────────────────────────────────────────
   "color.library": { en: "Color library", zh: "配色库" },
   "color.desc": { en: "Click a palette to recolor every panel’s data series in order. Structure (axes, ticks, text) is left untouched.", zh: "点击调色板，按顺序为每个面板的数据系列重新着色。结构（坐标轴、刻度、文字）保持不变。" },
+  "content.title": { en: "Content & color", zh: "内容与配色" },
+  "content.lineHint": { en: "Data line width · global, applied on Typography → Unify", zh: "数据线宽 · 全局，在 字体→统一 时应用" },
+  "legend.title": { en: "Legend", zh: "图例" },
+  "legend.desc": { en: "Recolor, rename or hide each legend entry.", zh: "为每个图例项改色、改名或隐藏。" },
+  "legend.selectPanel": { en: "Select a panel to edit its legend.", zh: "选择一个面板以编辑其图例。" },
+  "legend.none": { en: "No legend detected in this panel.", zh: "此面板未检测到图例。" },
+  "legend.footHint": { en: "Font size & fine-tune in", zh: "字号与逐项微调见" },
   "color.perSeries": { en: "Per-series color", zh: "单系列颜色" },
   "color.selectPanel": { en: "Select a panel to fine-tune colors.", zh: "选择一个面板以微调颜色。" },
   "color.noSeries": { en: "No data series detected in this panel.", zh: "此面板未检测到数据系列。" },

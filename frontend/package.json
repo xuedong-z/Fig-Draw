@@ -8,6 +8,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "driver.js": "^1.4.0",
     "fabric": "^6.9.1",
     "lucide-react": "^0.468.0",
     "next": "16.2.6",

@@ -1,20 +1,22 @@
 "use client";
 
-import { Palette, Star, Type, SlidersHorizontal, Download, Ruler } from "lucide-react";
+import { LineChart, Tag, Type, SlidersHorizontal, Download, Ruler } from "lucide-react";
 import { useStore, type RightTab } from "@/lib/store";
 import { useT } from "@/lib/i18n";
-import { PalettePanel } from "./panels/PalettePanel";
 import { AxisPanel } from "./panels/AxisPanel";
-import { EmphasisPanel } from "./panels/EmphasisPanel";
+import { ContentPanel } from "./panels/ContentPanel";
+import { LegendPanel } from "./panels/LegendPanel";
 import { TypographyPanel } from "./panels/TypographyPanel";
 import { TunePanel } from "./panels/TunePanel";
 import { ExportPanel } from "./panels/ExportPanel";
 
-const TABS: { id: RightTab; tkey: string; icon: typeof Palette }[] = [
-  { id: "palette", tkey: "tab.color", icon: Palette },
+/** Tabs are organized BY EDIT-TARGET (object): Axis · Content(data) · Legend ·
+ * Typography · Tune(any element, fall-back) · Export. */
+const TABS: { id: RightTab; tkey: string; icon: typeof Ruler }[] = [
   { id: "axis", tkey: "tab.axis", icon: Ruler },
+  { id: "content", tkey: "tab.content", icon: LineChart },
+  { id: "legend", tkey: "tab.legend", icon: Tag },
   { id: "type", tkey: "tab.type", icon: Type },
-  { id: "emphasis", tkey: "tab.emphasis", icon: Star },
   { id: "tune", tkey: "tab.tune", icon: SlidersHorizontal },
   { id: "export", tkey: "tab.export", icon: Download }
 ];
@@ -25,7 +27,7 @@ export function RightSidebar() {
   const t = useT();
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-l border-line bg-panel">
+    <aside className="flex w-72 shrink-0 flex-col border-l border-line bg-panel" data-tour="tabs">
       <div className="flex shrink-0 border-b border-line">
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -45,9 +47,9 @@ export function RightSidebar() {
         })}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {rightTab === "palette" && <PalettePanel />}
         {rightTab === "axis" && <AxisPanel />}
-        {rightTab === "emphasis" && <EmphasisPanel />}
+        {rightTab === "content" && <ContentPanel />}
+        {rightTab === "legend" && <LegendPanel />}
         {rightTab === "type" && <TypographyPanel />}
         {rightTab === "tune" && <TunePanel />}
         {rightTab === "export" && <ExportPanel />}

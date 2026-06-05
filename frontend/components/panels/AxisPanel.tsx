@@ -3,6 +3,8 @@
 import { Eraser } from "lucide-react";
 import { useStore, type AxisFrameStyle } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import type { TypographySettings } from "@/lib/types";
+import { NumRow, NATURE_PRESET } from "./_shared";
 
 const FRAMES: { v: AxisFrameStyle; tkey: string; tipKey: string }[] = [
   { v: "original", tkey: "frame.original", tipKey: "tip.frame.original" },
@@ -29,6 +31,10 @@ export function AxisPanel() {
   const centerAxisTitles = useStore((s) => s.centerAxisTitles);
   const bgTransparent = useStore((s) => s.bgTransparent);
   const setBackgroundTransparent = useStore((s) => s.setBackgroundTransparent);
+  const typography = useStore((s) => s.typography);
+  const setTypography = useStore((s) => s.setTypography);
+  const up = <K extends keyof TypographySettings>(k: K, v: TypographySettings[K]) =>
+    setTypography({ [k]: v } as Partial<TypographySettings>);
 
   if (!panelCount) return <div className="p-3 text-2xs text-faint">{t("axis.importHint")}</div>;
 
@@ -129,6 +135,18 @@ export function AxisPanel() {
       >
         <Eraser size={13} /> {t("axis.transparentBg")}
       </button>
+
+      {/* axis & tick sizes (global typography fields; applied on Typography → Unify) */}
+      <div className="mt-4 border-t border-line pt-3">
+        <div className="field-label mb-1">{t("axis.sizes")}</div>
+        <div className="flex flex-col gap-1.5">
+          <NumRow label={t("type.axisLabel")} value={typography.axisLabelPt} hint={`${NATURE_PRESET.axisLabelPt}`} onChange={(v) => up("axisLabelPt", v)} />
+          <NumRow label={t("type.tickLabel")} value={typography.tickLabelPt} hint={`${NATURE_PRESET.tickLabelPt}`} onChange={(v) => up("tickLabelPt", v)} />
+          <NumRow label={t("type.axisFrame")} value={typography.axisLineWidthPt} step={0.1} hint={`${NATURE_PRESET.axisLineWidthPt}`} onChange={(v) => up("axisLineWidthPt", v)} />
+          <NumRow label={t("type.tick")} value={typography.tickLineWidthPt} step={0.1} hint={`${NATURE_PRESET.tickLineWidthPt}`} onChange={(v) => up("tickLineWidthPt", v)} />
+        </div>
+        <p className="mt-1 text-[10px] text-faint">{t("axis.sizesHint")}</p>
+      </div>
     </div>
   );
 }
