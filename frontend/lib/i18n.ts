@@ -25,8 +25,8 @@ const STRINGS = {
   "tip.undo": { en: "Undo (Ctrl+Z)", zh: "撤销 (Ctrl+Z)" },
   "act.redo": { en: "Redo", zh: "重做" },
   "tip.redo": { en: "Redo (Ctrl+Shift+Z)", zh: "重做 (Ctrl+Shift+Z)" },
-  "act.trim": { en: "Trim", zh: "裁剪" },
-  "tip.trim": { en: "Trim edge whitespace on every panel", zh: "裁剪所有面板的边缘空白" },
+  "act.trim": { en: "Auto-crop", zh: "自动裁剪" },
+  "tip.trim": { en: "Auto-crop edge whitespace on every panel", zh: "自动裁剪所有面板的边缘空白" },
   "act.export": { en: "Export", zh: "导出" },
   "tip.lang": { en: "Switch language · 切换语言", zh: "切换语言 · Switch language" },
 
@@ -73,8 +73,8 @@ const STRINGS = {
   "tip.innerPad": { en: "Whitespace added inside each panel (plot shrinks; panels stay put)", zh: "在每个面板内部增加空白（绘图区缩小，面板位置不变）" },
   "act.grid": { en: "Grid", zh: "网格" },
   "tip.grid": { en: "Toggle grid", zh: "显示/隐藏网格" },
-  "act.snap": { en: "Snap", zh: "吸附" },
-  "tip.snap": { en: "Toggle snapping", zh: "开启/关闭吸附" },
+  "act.border": { en: "Border", zh: "框线" },
+  "tip.border": { en: "Show/hide panel outlines", zh: "显示/隐藏面板框线" },
 
   // ── Left sidebar: panel list ────────────────────────────────────────
   "sec.panels": { en: "Panels", zh: "面板" },
@@ -85,6 +85,11 @@ const STRINGS = {
   "tip.aspect": { en: "Width : height = {r}", zh: "宽 : 高 = {r}" },
   "act.autocropWs": { en: "Auto-crop whitespace", zh: "自动裁剪空白" },
   "tip.cropWs": { en: "Crop edge whitespace", zh: "裁剪边缘空白" },
+  "act.crop": { en: "Crop", zh: "裁剪" },
+  "tip.crop": { en: "Drag a box to choose the area to keep", zh: "拖动裁剪框，选择要保留的区域" },
+  "crop.hint": { en: "Drag to crop", zh: "拖动选择保留区域" },
+  "crop.apply": { en: "Apply", zh: "应用" },
+  "crop.cancel": { en: "Cancel", zh: "取消" },
   "tip.autocropRow": { en: "Auto-crop edge whitespace", zh: "自动裁剪边缘空白" },
   "panel.ticks": { en: "This panel’s ticks", zh: "此面板的刻度" },
   "act.inward": { en: "Inward", zh: "朝内" },

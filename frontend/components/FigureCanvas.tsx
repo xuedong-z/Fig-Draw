@@ -14,8 +14,9 @@
  * `snapshot()` is taken at the first move of an interaction so undo is atomic.
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Canvas, Rect, Line } from "fabric";
+import { Check, X } from "lucide-react";
 import { useStore, FIG_PX_PER_MM } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import type { Panel, PanelLabelStyle } from "@/lib/types";
@@ -59,6 +60,117 @@ function labelPosStyle(pos: PanelLabelStyle["position"], off: number): { left?: 
   return v;
 }
 
+const CROP_HANDLES: { k: string; x: number; y: number; cursor: string }[] = [
+  { k: "tl", x: 0, y: 0, cursor: "nwse-resize" },
+  { k: "t", x: 0.5, y: 0, cursor: "ns-resize" },
+  { k: "tr", x: 1, y: 0, cursor: "nesw-resize" },
+  { k: "l", x: 0, y: 0.5, cursor: "ew-resize" },
+  { k: "r", x: 1, y: 0.5, cursor: "ew-resize" },
+  { k: "bl", x: 0, y: 1, cursor: "nesw-resize" },
+  { k: "b", x: 0.5, y: 1, cursor: "ns-resize" },
+  { k: "br", x: 1, y: 1, cursor: "nwse-resize" }
+];
+
+/** Manual-crop overlay (z-30) — drag the box body to move it, the 8 handles to resize.
+ * Confirm applies the kept region; cancel / Esc exits, Enter confirms. Swallows pointer
+ * events so panel drags underneath don't fire while cropping. Coordinates are in the
+ * figure-canvas pixel space (same as panel.x/y/w/h). */
+function CropBox({ panel }: { panel: Panel }) {
+  const t = useT();
+  const applyCrop = useStore((s) => s.applyCrop);
+  const cancelCrop = useStore((s) => s.cancelCrop);
+  const [box, setBox] = useState({ x: panel.x, y: panel.y, w: panel.w, h: panel.h });
+  const drag = useRef<{ mode: string; sx: number; sy: number; box: typeof box } | null>(null);
+
+  const MIN = 16;
+  const clamp = (b: typeof box) => {
+    const w = Math.max(MIN, Math.min(b.w, panel.w));
+    const h = Math.max(MIN, Math.min(b.h, panel.h));
+    const x = Math.max(panel.x, Math.min(b.x, panel.x + panel.w - w));
+    const y = Math.max(panel.y, Math.min(b.y, panel.y + panel.h - h));
+    return { x, y, w, h };
+  };
+
+  const onDown = (mode: string) => (e: ReactPointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    drag.current = { mode, sx: e.clientX, sy: e.clientY, box: { ...box } };
+    const onMove = (ev: PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      const dx = ev.clientX - d.sx;
+      const dy = ev.clientY - d.sy;
+      let { x, y, w, h } = d.box;
+      if (d.mode === "move") {
+        x += dx;
+        y += dy;
+      } else {
+        if (d.mode.includes("l")) { x += dx; w -= dx; }
+        if (d.mode.includes("r")) { w += dx; }
+        if (d.mode.includes("t")) { y += dy; h -= dy; }
+        if (d.mode.includes("b")) { h += dy; }
+      }
+      setBox(clamp({ x, y, w, h }));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      drag.current = null;
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancelCrop();
+      else if (e.key === "Enter") applyCrop(box);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [box, applyCrop, cancelCrop]);
+
+  return (
+    <div className="absolute inset-0 z-30">
+      <div
+        className="absolute cursor-move"
+        style={{
+          left: box.x,
+          top: box.y,
+          width: box.w,
+          height: box.h,
+          boxShadow: "0 0 0 9999px rgba(15,18,28,0.45)",
+          outline: "1.5px dashed #5b63f0"
+        }}
+        onPointerDown={onDown("move")}
+      >
+        {CROP_HANDLES.map((hd) => (
+          <div
+            key={hd.k}
+            onPointerDown={onDown(hd.k)}
+            className="absolute h-2.5 w-2.5 rounded-sm border border-white"
+            style={{
+              left: `calc(${hd.x * 100}% - 5px)`,
+              top: `calc(${hd.y * 100}% - 5px)`,
+              background: "#5b63f0",
+              cursor: hd.cursor
+            }}
+          />
+        ))}
+      </div>
+      <div className="absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1.5 rounded-lg border border-line bg-panel px-2 py-1 shadow-pop">
+        <span className="mr-1 text-2xs text-faint">{t("crop.hint")}</span>
+        <button className="chip chip-on" onClick={() => applyCrop(box)}>
+          <Check size={13} /> {t("crop.apply")}
+        </button>
+        <button className="chip" onClick={cancelCrop}>
+          <X size={13} /> {t("crop.cancel")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function FigureCanvas() {
   const t = useT();
   const panels = useStore((s) => s.panels);
@@ -67,15 +179,19 @@ export function FigureCanvas() {
   const selectedPanelIds = useStore((s) => s.selectedPanelIds);
   const selectedElementId = useStore((s) => s.selectedElementId);
   const showGrid = useStore((s) => s.showGrid);
+  const showPanelBorder = useStore((s) => s.showPanelBorder);
   const labelStyle = useStore((s) => s.labelStyle);
   const layoutLocked = useStore((s) => s.layoutLocked);
+  const cropPanelId = useStore((s) => s.cropPanelId);
 
   const figW = pageWidthMm * FIG_PX_PER_MM;
+  const isPpt = pageWidthMm >= 320; // PowerPoint preset (338mm) → fixed 16:9 slide
   const figH = useMemo(() => {
+    if (isPpt) return Math.round((figW * 9) / 16);
     let maxB = 0;
     for (const p of panels) maxB = Math.max(maxB, p.y + p.h);
     return Math.max(280, Math.ceil(maxB) + 10);
-  }, [panels]);
+  }, [panels, isPpt, figW]);
 
   const hostRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
@@ -184,6 +300,64 @@ export function FigureCanvas() {
       } else gh.set({ visible: false });
     };
 
+    // Snap while RESIZING: snap only the edge(s) being dragged (per the active handle)
+    // to neighbouring panel edges / canvas edges, adjusting width/height — not just moving
+    // the whole rect like applySnap. tl/tr/bl/br move two edges; ml/mr/mt/mb move one.
+    const applyScaleSnap = (o: RectWithId) => {
+      const corner = (o as { __corner?: string }).__corner;
+      if (!corner) {
+        hideGuides();
+        return;
+      }
+      const r = effRect(o);
+      const W = c.getWidth();
+      const xs = [0, W, W / 2];
+      const ys = [0];
+      for (const p of useStore.getState().panels) {
+        if (p.id === o.scId) continue;
+        xs.push(p.x, p.x + p.w, p.x + p.w / 2);
+        ys.push(p.y, p.y + p.h, p.y + p.h / 2);
+      }
+      let left = r.x;
+      let top = r.y;
+      let right = r.x + r.w;
+      let bottom = r.y + r.h;
+      let guideX: number | null = null;
+      let guideY: number | null = null;
+      if (corner.includes("l")) {
+        const s = snap1D([{ val: left, place: (t) => t }], xs);
+        if (s && s.pos < right - 24) {
+          left = s.pos;
+          guideX = s.guide;
+        }
+      } else if (corner.includes("r")) {
+        const s = snap1D([{ val: right, place: (t) => t }], xs);
+        if (s && s.pos > left + 24) {
+          right = s.pos;
+          guideX = s.guide;
+        }
+      }
+      if (corner.includes("t")) {
+        const s = snap1D([{ val: top, place: (t) => t }], ys);
+        if (s && s.pos < bottom - 18) {
+          top = s.pos;
+          guideY = s.guide;
+        }
+      } else if (corner.includes("b")) {
+        const s = snap1D([{ val: bottom, place: (t) => t }], ys);
+        if (s && s.pos > top + 18) {
+          bottom = s.pos;
+          guideY = s.guide;
+        }
+      }
+      o.set({ left, top, width: right - left, height: bottom - top, scaleX: 1, scaleY: 1 });
+      o.setCoords();
+      if (guideX != null) showGuide(gv, true, guideX);
+      else gv.set({ visible: false });
+      if (guideY != null) showGuide(gh, false, guideY);
+      else gh.set({ visible: false });
+    };
+
     let dragSnapped = false;
 
     c.on("mouse:down", (opt) => {
@@ -247,6 +421,8 @@ export function FigureCanvas() {
       const h = Math.max(18, (o.height ?? 0) * (o.scaleY ?? 1));
       o.set({ width: w, height: h, scaleX: 1, scaleY: 1 });
       o.setCoords();
+      // snap the dragged edge(s) to neighbouring panels / canvas edges, same as moving
+      applyScaleSnap(o);
       syncOverlay(o);
     });
 
@@ -354,11 +530,12 @@ export function FigureCanvas() {
         lockMovementY: layoutLocked,
         lockScalingX: layoutLocked,
         lockScalingY: layoutLocked,
-        hasControls: !layoutLocked
+        hasControls: !layoutLocked,
+        stroke: showPanelBorder ? FAINT : "transparent"
       });
     }
     c.requestRenderAll();
-  }, [panels, layoutLocked]);
+  }, [panels, layoutLocked, showPanelBorder]);
 
   // ── reflect store selection -> fabric active object ──────────────────────
   useEffect(() => {
@@ -499,6 +676,11 @@ export function FigureCanvas() {
 
       {/* fabric interaction layer mounts its own <canvas> inside this host */}
       <div ref={hostRef} className="absolute inset-0 z-20" />
+
+      {/* manual-crop overlay sits above everything while active */}
+      {cropPanelId && panels.some((p) => p.id === cropPanelId) && (
+        <CropBox key={cropPanelId} panel={panels.find((p) => p.id === cropPanelId)!} />
+      )}
     </div>
   );
 }

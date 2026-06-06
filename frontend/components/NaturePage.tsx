@@ -30,8 +30,21 @@ export function NaturePage() {
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const figW = pageWidthMm * FIG_PX_PER_MM;
   const pagePadding = 52;
-  // single-column page (≤100mm) → single-column body text; double / PPT → two columns
+  // single-column page (≤100mm) → single-column body text; double → two columns
   const cols = pageWidthMm <= 100 ? "columns-1" : "columns-2";
+  const isPpt = pageWidthMm >= 320; // PowerPoint preset → a plain 16:9 slide, no article text
+
+  // PowerPoint mode: a clean 16:9 slide (the figure canvas is the slide), no journal chrome.
+  if (isPpt) {
+    return (
+      <div className="flex min-h-full items-center justify-center p-10">
+        <figure className="relative h-fit rounded-[2px] shadow-paper" style={{ width: figW }}>
+          <FigureCanvas />
+          <AlignToolbar />
+        </figure>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-full justify-center px-8 py-10">
