@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import type { Panel } from "@/lib/types";
 import { panelScale, PT_TO_FIG } from "@/lib/svg/mutate";
 import { findPalette } from "@/lib/palettes";
 
@@ -28,6 +29,54 @@ const FONTS = ["Arial", "Helvetica", "Times New Roman", "Georgia", "DejaVu Sans"
 
 function asHex(c: string | null): string {
   return c && /^#[0-9a-f]{6}$/i.test(c) ? c : "#000000";
+}
+
+/** Raster (image) panel controls: crop by zooming in (edges clip to the panel box) and
+ * pan the image within the box. Shown in Tune when an image panel is selected. */
+function RasterControls({ panel }: { panel: Panel }) {
+  const t = useT();
+  const setImagePanelTransform = useStore((s) => s.setImagePanelTransform);
+  const snapshot = useStore((s) => s.snapshot);
+  const scale = panel.imgScale ?? 1;
+  const dx = panel.imgDx ?? 0;
+  const dy = panel.imgDy ?? 0;
+  const step = Math.max(4, panel.vb.w * 0.04);
+  const move = (mx: number, my: number) => {
+    snapshot();
+    setImagePanelTransform(panel.id, { dx: dx + mx * step, dy: dy + my * step });
+  };
+  return (
+    <div>
+      <label className="field-label">{t("tune.imgCrop")} · {Math.round(scale * 100)}%</label>
+      <input
+        type="range"
+        min={1}
+        max={4}
+        step={0.02}
+        className="mb-3 w-full"
+        value={scale}
+        onPointerDown={() => snapshot()}
+        onChange={(e) => setImagePanelTransform(panel.id, { scale: Number(e.target.value) })}
+      />
+      <label className="field-label">{t("tune.imgPos")}</label>
+      <div className="mb-3 flex items-center gap-1">
+        <button className="tool-btn px-1.5" onClick={() => move(-1, 0)} title="←"><ChevronLeft size={13} /></button>
+        <button className="tool-btn px-1.5" onClick={() => move(0, -1)} title="↑"><ChevronUp size={13} /></button>
+        <button className="tool-btn px-1.5" onClick={() => move(0, 1)} title="↓"><ChevronDown size={13} /></button>
+        <button className="tool-btn px-1.5" onClick={() => move(1, 0)} title="→"><ChevronRight size={13} /></button>
+      </div>
+      <button
+        className="chip w-full justify-center"
+        onClick={() => {
+          snapshot();
+          setImagePanelTransform(panel.id, { scale: 1, dx: 0, dy: 0 });
+        }}
+      >
+        {t("tune.imgReset")}
+      </button>
+      <p className="mt-2 text-2xs text-faint">{t("tune.imgHint")}</p>
+    </div>
+  );
 }
 
 export function TunePanel() {
@@ -111,9 +160,17 @@ export function TunePanel() {
   if (!el) {
     return (
       <div className="p-3">
-        <div className="panel-title mb-2">{t("tune.editEl")} · {panel.label}</div>
-        {picker}
-        <p className="text-2xs text-faint">{t("tune.orClick")}</p>
+        <div className="panel-title mb-2">
+          {panel.mode === "image" ? t("tune.editImg") : t("tune.editEl")} · {panel.label}
+        </div>
+        {panel.mode === "image" ? (
+          <RasterControls panel={panel} />
+        ) : (
+          <>
+            {picker}
+            <p className="text-2xs text-faint">{t("tune.orClick")}</p>
+          </>
+        )}
       </div>
     );
   }
