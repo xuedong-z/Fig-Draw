@@ -10,6 +10,9 @@ export interface TourStep {
   body: { en: string; zh: string };
   side?: "top" | "bottom" | "left" | "right";
   align?: "start" | "center" | "end";
+  /** scroll the canvas workspace to top / bottom when this step starts, so the relevant
+   *  panel is in view (e.g. the LAST panel for the resize step). */
+  scrollCanvas?: "top" | "bottom";
 }
 
 export const TOUR_STEPS: TourStep[] = [
@@ -41,7 +44,8 @@ export const TOUR_STEPS: TourStep[] = [
       zh: "点「已锁定」切换到自由模式,选中最后一张图,在「尺寸」里随意修改。注意 figsize 让字号和线宽保持不变。"
     },
     side: "right",
-    align: "center"
+    align: "center",
+    scrollCanvas: "bottom"
   },
   {
     selector: '[data-tour="tabs"]',
@@ -75,10 +79,10 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     selector: '[data-tour="trim"]',
-    title: { en: "7. Trim & tidy", zh: "7. 裁剪整理" },
+    title: { en: "7. Auto-crop & tidy", zh: "7. 自动裁剪整理" },
     body: {
-      en: "Click Trim to crop edge whitespace on every panel. Tip: after trimming, hit the 3×3 grid again to tidy the layout back up.",
-      zh: "点 Trim 裁掉每个面板的边缘空白。提示:裁剪之后,记得再点一次 3×3 网格恢复整齐布局。"
+      en: "Click Auto-crop to trim edge whitespace on every panel. Tip: afterwards, hit the 3×3 grid again to tidy the layout back up.",
+      zh: "点「自动裁剪」裁掉每个面板的边缘空白。提示:之后记得再点一次 3×3 网格恢复整齐布局。"
     },
     side: "bottom",
     align: "start"

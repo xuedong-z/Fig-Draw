@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Minus, Plus } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import type { DataSeries, Panel } from "@/lib/types";
 
 const STEP = 6; // px per move click
-const GAP_STEP = 3; // px per spacing click
 
 /** One legend entry: color + editable label + show/hide. The whole legend moves and
  * spaces as a group via the controls below (not per-item). */
@@ -63,8 +62,12 @@ export function LegendPanel() {
   const setRightTab = useStore((s) => s.setRightTab);
   const nudgeElements = useStore((s) => s.nudgeElements);
   const setLegendSpacing = useStore((s) => s.setLegendSpacing);
+  const snapshot = useStore((s) => s.snapshot);
+  const [spacingPos, setSpacingPos] = useState(0);
 
   const panel = panels.find((p) => p.id === selectedPanelId) ?? null;
+  // the spacing slider is relative to when this panel was opened — reset on switch
+  useEffect(() => setSpacingPos(0), [selectedPanelId]);
   const series = panel
     ? [...panel.series].filter((s) => s.legendElementId).sort((a, b) => a.order - b.order)
     : [];
@@ -106,25 +109,28 @@ export function LegendPanel() {
             </div>
           </div>
 
-          {/* spacing between entries */}
+          {/* spacing between entries — drag to tighten / loosen */}
           {series.length > 1 && (
             <div className="mt-3">
               <div className="field-label mb-1">{t("legend.spacing")}</div>
-              <div className="flex items-center gap-1">
-                <button
-                  className="tool-btn flex-1 justify-center"
-                  onClick={() => setLegendSpacing(panel.id, -GAP_STEP)}
-                  title={t("legend.tighter")}
-                >
-                  <Minus size={13} />
-                </button>
-                <button
-                  className="tool-btn flex-1 justify-center"
-                  onClick={() => setLegendSpacing(panel.id, GAP_STEP)}
-                  title={t("legend.looser")}
-                >
-                  <Plus size={13} />
-                </button>
+              <div className="flex items-center gap-2">
+                <Minus size={12} className="shrink-0 text-faint" />
+                <input
+                  type="range"
+                  min={-10}
+                  max={20}
+                  step={1}
+                  value={spacingPos}
+                  onPointerDown={() => snapshot()}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setLegendSpacing(panel.id, v - spacingPos);
+                    setSpacingPos(v);
+                  }}
+                  className="flex-1"
+                  title={t("legend.spacing")}
+                />
+                <Plus size={12} className="shrink-0 text-faint" />
               </div>
             </div>
           )}

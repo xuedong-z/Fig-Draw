@@ -151,11 +151,13 @@ interface AppState {
   selectedPanelId: string | null;
   selectedPanelIds: string[]; // multi-select for align/distribute
   selectedElementId: string | null;
+  cropPanelId: string | null; // panel currently in manual-crop mode (drag a crop box)
   rightTab: RightTab;
   helpOpen: boolean; // user-manual modal (transient UI, not in history)
   tourActive: boolean; // guided tour running (transient UI)
   showGrid: boolean;
   snapEnabled: boolean;
+  showPanelBorder: boolean; // dashed outline around each panel (toggle in left sidebar)
   lang: Lang;
   // `text` is an English fallback; `i18n` (key + vars) lets Messages re-translate
   // the toast live when the language is switched.
@@ -181,6 +183,7 @@ interface AppState {
   endTour: () => void;
   toggleGrid: () => void;
   toggleSnap: () => void;
+  togglePanelBorder: () => void;
   setLang: (l: Lang) => void;
   /** Restore the auto-saved document from localStorage (called once on mount). */
   hydrateDoc: () => void;
@@ -207,6 +210,9 @@ interface AppState {
   setAxisFrame: (style: AxisFrameStyle) => void;
   setBackgroundTransparent: (transparent: boolean) => void;
   autoCropPanel: (id: string) => void;
+  startCrop: (id: string) => void;
+  cancelCrop: () => void;
+  applyCrop: (rect: BBox) => void;
   setTickDirection: (direction: TickDirection) => void;
   setTickVisible: (axis: "x" | "y", visible: boolean) => void;
   setAxisLabelGap: (gap: number) => void;
@@ -440,40 +446,6 @@ function reflow(panels: Panel[], pageWidthMm: number, gutterMm: number): Panel[]
   });
 }
 
-/** Lay panels into a `cols`-column grid: each panel's WIDTH snaps to the cell width, its
- * HEIGHT follows its own aspect (proportions never change — no stretch). Row height = the
- * tallest panel in that row; shorter panels center vertically; a short last row centers
- * horizontally. SVG panels rebuild via figsize (fonts/lines held); image panels just
- * resize (aspect preserved → no distortion). */
-function gridLayout(panels: Panel[], cols: number, gap: number, pageWidthMm: number): Panel[] {
-  const ordered = [...panels].sort((a, b) => a.order - b.order);
-  const figW = pageWidthMm * FIG_PX_PER_MM;
-  const cellW = (figW - gap * (cols - 1)) / cols;
-  const sized = ordered.map((p) => ({ p, w: cellW, h: cellW / (p.aspect || 1.4) }));
-  const fullRowW = cols * cellW + (cols - 1) * gap;
-  const rect = new Map<string, { x: number; y: number; w: number; h: number }>();
-  let y = 0;
-  for (let i = 0; i < sized.length; i += cols) {
-    const row = sized.slice(i, i + cols);
-    const rowH = Math.max(...row.map((it) => it.h));
-    const rowW = row.length * cellW + (row.length - 1) * gap;
-    const xOff = (fullRowW - rowW) / 2; // center a short (last) row
-    row.forEach((it, c) => {
-      rect.set(it.p.id, { x: xOff + c * (cellW + gap), y: y + (rowH - it.h) / 2, w: it.w, h: it.h });
-    });
-    y += rowH + gap;
-  }
-  return panels.map((p) => {
-    const r = rect.get(p.id);
-    if (!r) return p;
-    if (p.mode !== "full" || (Math.abs(p.w - r.w) < 0.5 && Math.abs(p.h - r.h) < 0.5)) {
-      return { ...p, ...r };
-    }
-    const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, r.w, r.h);
-    return { ...reparsePanel({ ...p, ...r }, out.svg), plot: out.plot };
-  });
-}
-
 /** Merge freshly aggregated series with previous ones, preserving user edits. */
 function mergeSeries(oldSeries: DataSeries[], fresh: DataSeries[]): DataSeries[] {
   const byId = new Map(oldSeries.map((s) => [s.id, s]));
@@ -527,6 +499,30 @@ function cropPanel(p: Panel, label: PanelLabelStyle): Panel {
   const box = { x: x0 - pad, y: y0 - pad - labelM, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 + labelM };
   const out = bakeToCanvasSvg(p.svg, box, p.plot, box.w, box.h);
   return reparsePanel({ ...p, w: box.w, h: box.h, aspect: box.w / box.h }, out.svg);
+}
+
+/** Crop a panel down to `box`, given in the panel's viewBox coordinate space. Full plots
+ * are re-baked to the kept region (element sizes preserved); image panels just narrow
+ * their viewBox to a window onto the kept region. The caller sets the canvas x/y/w/h. */
+function cropPanelToBox(p: Panel, box: BBox): Panel {
+  if (p.mode === "full") {
+    const out = bakeToCanvasSvg(p.svg, box, p.plot, box.w, box.h);
+    return reparsePanel({ ...p, aspect: box.w / box.h }, out.svg);
+  }
+  const r = (v: number) => Math.round(v * 100) / 100;
+  const svg = p.svg
+    .replace(/viewBox="[^"]*"/, `viewBox="${r(box.x)} ${r(box.y)} ${r(box.w)} ${r(box.h)}"`)
+    .replace(/width="[^"]*" height="[^"]*"/, `width="${r(box.w)}" height="${r(box.h)}"`);
+  const ix0 = Math.max(box.x, p.plot.x), iy0 = Math.max(box.y, p.plot.y);
+  const ix1 = Math.min(box.x + box.w, p.plot.x + p.plot.w);
+  const iy1 = Math.min(box.y + box.h, p.plot.y + p.plot.h);
+  return {
+    ...p,
+    svg,
+    vb: { x: box.x, y: box.y, w: box.w, h: box.h },
+    plot: { x: ix0, y: iy0, w: Math.max(1, ix1 - ix0), h: Math.max(1, iy1 - iy0) },
+    aspect: box.w / box.h
+  };
 }
 
 /**
@@ -750,11 +746,13 @@ export const useStore = create<AppState>((set, get) => ({
   selectedPanelId: null,
   selectedPanelIds: [],
   selectedElementId: null,
+  cropPanelId: null,
   rightTab: "content",
   helpOpen: false,
   tourActive: false,
   showGrid: true,
   snapEnabled: true,
+  showPanelBorder: true,
   lang: "en", // hydrated from localStorage on the client (see Editor.tsx)
   importMessages: [],
 
@@ -868,14 +866,20 @@ export const useStore = create<AppState>((set, get) => ({
       // pad the raster so it doesn't bleed to the panel edges — the same breathing room a
       // plot has around its axes. The image sits centered inside a slightly larger viewBox
       // (transparent margin), so panel labels and grid gaps read cleanly.
-      const pad = Math.round(Math.min(iw, ih) * 0.07);
-      const vbW = iw + pad * 2;
-      const vbH = ih + pad * 2;
+      // Match the breathing room a line plot has around its axes, so PNG and SVG panels
+      // read with the same margins in a grid. Pad each axis by the same fraction (keeps the
+      // image aspect), and model it like an SVG: the viewBox includes the margin and `plot`
+      // is the image's box inside it (so figsize / crop treat it exactly like a plot).
+      const PAD_RATIO = 0.1; // ≈ a typical plot's axis-label margin
+      const padX = Math.round(iw * PAD_RATIO);
+      const padY = Math.round(ih * PAD_RATIO);
+      const vbW = iw + padX * 2;
+      const vbH = ih + padY * 2;
       const aspect = vbW / vbH || 1.4;
       const rect = placeNewPanel(s.panels, aspect, s.pageWidthMm, s.gutterMm);
       const svg =
         `<svg xmlns="http://www.w3.org/2000/svg" width="${vbW}" height="${vbH}" viewBox="0 0 ${vbW} ${vbH}" ` +
-        `preserveAspectRatio="xMidYMid meet"><image href="${dataUrl}" x="${pad}" y="${pad}" width="${iw}" height="${ih}" ` +
+        `preserveAspectRatio="xMidYMid meet"><image href="${dataUrl}" x="${padX}" y="${padY}" width="${iw}" height="${ih}" ` +
         `preserveAspectRatio="xMidYMid meet"/></svg>`;
       const panel: Panel = {
         id: `p${Date.now().toString(36)}_${s.panels.length}`,
@@ -883,8 +887,8 @@ export const useStore = create<AppState>((set, get) => ({
         label: "",
         svg,
         baseSvg: svg,
-        vb: { x: 0, y: 0, w: iw, h: ih },
-        plot: { x: 0, y: 0, w: iw, h: ih },
+        vb: { x: 0, y: 0, w: vbW, h: vbH },
+        plot: { x: padX, y: padY, w: iw, h: ih },
         aspect,
         x: rect.x,
         y: rect.y,
@@ -1005,6 +1009,7 @@ export const useStore = create<AppState>((set, get) => ({
   endTour: () => set({ tourActive: false }),
   toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
   toggleSnap: () => set((s) => ({ snapEnabled: !s.snapEnabled })),
+  togglePanelBorder: () => set((s) => ({ showPanelBorder: !s.showPanelBorder })),
   setLang: (l) => {
     if (typeof window !== "undefined") {
       try {
@@ -1307,6 +1312,31 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({ panels: s.panels.map((p) => (p.id === id ? cropPanel(p, s.labelStyle) : p)) }));
   },
 
+  startCrop: (id) => set({ cropPanelId: id, selectedPanelId: id, selectedElementId: null }),
+  cancelCrop: () => set({ cropPanelId: null }),
+  applyCrop: (rect) => {
+    const id = get().cropPanelId;
+    if (!id) return;
+    get().snapshot();
+    set((s) => {
+      const panels = s.panels.map((p) => {
+        if (p.id !== id) return p;
+        // map the canvas-space crop rect into the panel's own viewBox coordinates
+        const fx = (rect.x - p.x) / p.w;
+        const fy = (rect.y - p.y) / p.h;
+        const box = {
+          x: p.vb.x + fx * p.vb.w,
+          y: p.vb.y + fy * p.vb.h,
+          w: Math.max(1, (rect.w / p.w) * p.vb.w),
+          h: Math.max(1, (rect.h / p.h) * p.vb.h)
+        };
+        const cropped = cropPanelToBox(p, box);
+        return { ...cropped, x: rect.x, y: rect.y, w: rect.w, h: rect.h };
+      });
+      return { panels, cropPanelId: null };
+    });
+  },
+
   cropSelected: () => {
     const ids = get().selectedPanelIds;
     if (!ids.length) return;
@@ -1429,20 +1459,38 @@ export const useStore = create<AppState>((set, get) => ({
 
   applyGrid: (cols) => {
     get().snapshot();
-    // Snap panels back into a tidy `cols`-column grid, keeping each panel's PROPORTIONS
-    // (width = cell width, height follows its aspect — never stretched). Short rows center
-    // horizontally; shorter panels center vertically in their row.
-    set((s) => ({ gridCols: cols, layoutLocked: true, panels: gridLayout(s.panels, cols, s.gridGap, s.pageWidthMm) }));
+    set((s) => {
+      const ordered = [...s.panels].sort((a, b) => a.order - b.order);
+      const editable = ordered.filter((p) => p.mode === "full");
+      const g = s.gridGap;
+      const figW = s.pageWidthMm * FIG_PX_PER_MM;
+      const cellW = (figW - g * (cols - 1)) / cols;
+      const avgAspect = editable.length
+        ? editable.reduce((a, p) => a + (p.aspect || 1.4), 0) / editable.length
+        : 1.4;
+      const cellH = cellW / avgAspect;
+      const byId = new Map<string, Panel>();
+      ordered.forEach((p, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = col * (cellW + g);
+        const y = row * (cellH + g);
+        if (p.mode !== "full" || (Math.abs(p.w - cellW) < 0.5 && Math.abs(p.h - cellH) < 0.5)) {
+          byId.set(p.id, { ...p, x, y, w: cellW, h: cellH });
+        } else {
+          const out = rebuildFigsizeSvg(p.svg, p.plot, p.vb.w, p.vb.h, cellW, cellH);
+          byId.set(p.id, { ...reparsePanel({ ...p, x, y, w: cellW, h: cellH }, out.svg), plot: out.plot });
+        }
+      });
+      return { gridCols: cols, layoutLocked: true, panels: s.panels.map((p) => byId.get(p.id) ?? p) };
+    });
   },
 
   setLayoutLocked: (locked) => set({ layoutLocked: locked }),
 
   setGridGap: (px) => {
-    // re-grid with the new gap (no snapshot — the slider fires continuously)
-    set((s) => ({
-      gridGap: px,
-      panels: s.gridCols > 0 ? gridLayout(s.panels, s.gridCols, px, s.pageWidthMm) : s.panels
-    }));
+    set({ gridGap: px });
+    if (get().gridCols > 0) get().applyGrid(get().gridCols);
   },
 
   moveAxisLabel: (panelId, scid, opts) => {
@@ -1466,7 +1514,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setLegendSpacing: (panelId, delta) => {
-    get().snapshot();
+    // live nudge (no snapshot here) — the spacing slider calls snapshot() once on pointer-down
     set((s) => ({
       panels: s.panels.map((p) => {
         if (p.id !== panelId) return p;

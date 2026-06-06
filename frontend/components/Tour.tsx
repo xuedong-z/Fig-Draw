@@ -18,7 +18,12 @@ export function Tour() {
 
   useEffect(() => {
     if (!tourActive) return;
-    const steps = TOUR_STEPS.filter((s) => document.querySelector(s.selector)).map((s) => ({
+    const scrollCanvas = (to: "top" | "bottom") => {
+      const main = document.querySelector('[data-tour="canvas"]');
+      if (main) main.scrollTo({ top: to === "bottom" ? main.scrollHeight : 0, behavior: "smooth" });
+    };
+    const filtered = TOUR_STEPS.filter((s) => document.querySelector(s.selector));
+    const steps = filtered.map((s) => ({
       element: s.selector,
       popover: {
         title: s.title[lang],
@@ -38,6 +43,15 @@ export function Tour() {
       prevBtnText: t("tour.prev"),
       doneBtnText: t("tour.done"),
       steps,
+      // Scroll the canvas workspace into the right spot AFTER each step highlights, so the
+      // relevant panel is in view (e.g. the LAST panel for the resize step). Per-step hooks
+      // proved unreliable in driver 1.4; the global hook + activeIndex maps back to the
+      // original step's `scrollCanvas`.
+      onHighlighted: (_el, _step, opts) => {
+        const orig = filtered[opts.state.activeIndex ?? -1];
+        // defer so driver's own highlight-scroll settles first, then position the canvas
+        if (orig?.scrollCanvas) window.setTimeout(() => scrollCanvas(orig.scrollCanvas!), 150);
+      },
       onDestroyed: () => endTour()
     });
     d.drive();

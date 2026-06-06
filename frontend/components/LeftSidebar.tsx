@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, ChevronUp, ChevronDown, Grid3x3, Magnet, Crop, Lock, Unlock } from "lucide-react";
+import { Trash2, ChevronUp, ChevronDown, Grid3x3, Square, Crop, Lock, Unlock } from "lucide-react";
 import { useStore, FIG_PX_PER_MM } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { JOURNAL_PRESETS } from "@/lib/journals";
@@ -21,6 +21,7 @@ export function LeftSidebar() {
   const removePanel = useStore((s) => s.removePanel);
   const reorderPanels = useStore((s) => s.reorderPanels);
   const autoCropPanel = useStore((s) => s.autoCropPanel);
+  const startCrop = useStore((s) => s.startCrop);
   const pageWidthMm = useStore((s) => s.pageWidthMm);
   const setPageWidthMm = useStore((s) => s.setPageWidthMm);
   const innerPad = useStore((s) => s.innerPad);
@@ -32,9 +33,9 @@ export function LeftSidebar() {
   const gridGap = useStore((s) => s.gridGap);
   const setGridGap = useStore((s) => s.setGridGap);
   const showGrid = useStore((s) => s.showGrid);
-  const snapEnabled = useStore((s) => s.snapEnabled);
+  const showPanelBorder = useStore((s) => s.showPanelBorder);
   const toggleGrid = useStore((s) => s.toggleGrid);
-  const toggleSnap = useStore((s) => s.toggleSnap);
+  const togglePanelBorder = useStore((s) => s.togglePanelBorder);
   const updatePanelRect = useStore((s) => s.updatePanelRect);
 
   const ordered = [...panels].sort((a, b) => a.order - b.order);
@@ -144,11 +145,11 @@ export function LeftSidebar() {
             <Grid3x3 size={13} /> {t("act.grid")}
           </button>
           <button
-            className={`chip flex-1 ${snapEnabled ? "chip-on" : ""}`}
-            onClick={toggleSnap}
-            title={t("tip.snap")}
+            className={`chip flex-1 ${showPanelBorder ? "chip-on" : ""}`}
+            onClick={togglePanelBorder}
+            title={t("tip.border")}
           >
-            <Magnet size={13} /> {t("act.snap")}
+            <Square size={13} /> {t("act.border")}
           </button>
         </div>
       </div>
@@ -276,10 +277,10 @@ export function LeftSidebar() {
             </div>
             <button
               className="chip mt-1.5 w-full justify-center"
-              onClick={() => autoCropPanel(selectedPanel.id)}
-              title={t("tip.cropWs")}
+              onClick={() => startCrop(selectedPanel.id)}
+              title={t("tip.crop")}
             >
-              <Crop size={12} /> {t("act.autocropWs")}
+              <Crop size={12} /> {t("act.crop")}
             </button>
           </div>
         )}
