@@ -129,7 +129,8 @@ export interface Panel {
   baseSvg: string; // pristine original (for "reset")
   vb: BBox; // viewBox of the svg (= panel size in canvas px after the figsize bake)
   plot: BBox; // plot-area box in current svg coords — drives model-based figsize
-  aspect: number; // intrinsic w/h
+  aspect: number; // intrinsic w/h (current; changes on crop / resize)
+  baseAspect?: number; // import-time aspect — a STABLE grid-height basis (crop/Trim never touch it)
   // Placement on the figure canvas, in figure-space pixels (top-left origin).
   x: number;
   y: number;
@@ -143,6 +144,11 @@ export interface Panel {
   series: DataSeries[];
   textToPath: boolean; // text was converted to paths -> fonts not editable
   order: number; // panel order -> drives (a)(b)(c) labels
+  // Raster (image) panels only — transform of the image WITHIN its panel box, so the user
+  // can crop (zoom in) and reposition the photo without changing the panel's size or place.
+  imgScale?: number;
+  imgDx?: number;
+  imgDy?: number;
 }
 
 /** Panel-label styling (Module B). */

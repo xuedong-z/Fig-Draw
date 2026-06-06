@@ -170,6 +170,7 @@ interface AppState {
   // actions
   importSvg: (name: string, raw: string) => void;
   importImage: (name: string, dataUrl: string, iw: number, ih: number) => void;
+  setImagePanelTransform: (panelId: string, patch: { scale?: number; dx?: number; dy?: number }) => void;
   removePanel: (id: string) => void;
   selectPanel: (id: string | null) => void;
   togglePanelSelected: (id: string) => void;
@@ -525,6 +526,33 @@ function cropPanelToBox(p: Panel, box: BBox): Panel {
   };
 }
 
+/** Build a raster panel's SVG: the image sits in a `vbW×vbH` viewBox with `padX/padY`
+ * breathing room, transformed by `scale` (zoom about the image centre = crop) and `dx/dy`
+ * (pan). Anything past the viewBox is clipped by the SVG, so zooming in crops the edges. */
+function buildImagePanelSvg(
+  href: string,
+  iw: number,
+  ih: number,
+  padX: number,
+  padY: number,
+  vbW: number,
+  vbH: number,
+  scale: number,
+  dx: number,
+  dy: number
+): string {
+  const w = iw * scale;
+  const h = ih * scale;
+  const x = padX + iw / 2 - w / 2 + dx;
+  const y = padY + ih / 2 - h / 2 + dy;
+  const r = (v: number) => Math.round(v * 100) / 100;
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${vbW}" height="${vbH}" viewBox="0 0 ${vbW} ${vbH}" ` +
+    `preserveAspectRatio="xMidYMid meet"><image href="${href}" x="${r(x)}" y="${r(y)}" width="${r(w)}" height="${r(h)}" ` +
+    `preserveAspectRatio="xMidYMid meet"/></svg>`
+  );
+}
+
 /**
  * Center axis titles on the plot axis using their VISUAL bounding boxes (not the
  * text baseline anchors, which sit off-center). Title fragments are grouped by
@@ -809,6 +837,7 @@ export const useStore = create<AppState>((set, get) => ({
         vb: isFull ? { x: 0, y: 0, w: rect.w, h: rect.h } : result!.vb,
         plot: baked.plot,
         aspect,
+        baseAspect: aspect,
         x: rect.x,
         y: rect.y,
         w: rect.w,
@@ -863,9 +892,6 @@ export const useStore = create<AppState>((set, get) => ({
   importImage: (name, dataUrl, iw, ih) => {
     get().snapshot();
     set((s) => {
-      // pad the raster so it doesn't bleed to the panel edges — the same breathing room a
-      // plot has around its axes. The image sits centered inside a slightly larger viewBox
-      // (transparent margin), so panel labels and grid gaps read cleanly.
       // Match the breathing room a line plot has around its axes, so PNG and SVG panels
       // read with the same margins in a grid. Pad each axis by the same fraction (keeps the
       // image aspect), and model it like an SVG: the viewBox includes the margin and `plot`
@@ -877,10 +903,7 @@ export const useStore = create<AppState>((set, get) => ({
       const vbH = ih + padY * 2;
       const aspect = vbW / vbH || 1.4;
       const rect = placeNewPanel(s.panels, aspect, s.pageWidthMm, s.gutterMm);
-      const svg =
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${vbW}" height="${vbH}" viewBox="0 0 ${vbW} ${vbH}" ` +
-        `preserveAspectRatio="xMidYMid meet"><image href="${dataUrl}" x="${padX}" y="${padY}" width="${iw}" height="${ih}" ` +
-        `preserveAspectRatio="xMidYMid meet"/></svg>`;
+      const svg = buildImagePanelSvg(dataUrl, iw, ih, padX, padY, vbW, vbH, 1, 0, 0);
       const panel: Panel = {
         id: `p${Date.now().toString(36)}_${s.panels.length}`,
         name,
@@ -890,6 +913,7 @@ export const useStore = create<AppState>((set, get) => ({
         vb: { x: 0, y: 0, w: vbW, h: vbH },
         plot: { x: padX, y: padY, w: iw, h: ih },
         aspect,
+        baseAspect: aspect,
         x: rect.x,
         y: rect.y,
         w: rect.w,
@@ -900,11 +924,28 @@ export const useStore = create<AppState>((set, get) => ({
         elements: [],
         series: [],
         textToPath: false,
-        order: s.panels.length
+        order: s.panels.length,
+        imgScale: 1,
+        imgDx: 0,
+        imgDy: 0
       };
       const panels = relabel([...s.panels, panel], s.labelStyle);
       return { panels, selectedPanelId: panel.id, selectedElementId: null };
     });
+  },
+
+  setImagePanelTransform: (panelId, patch) => {
+    set((s) => ({
+      panels: s.panels.map((p) => {
+        if (p.id !== panelId || p.mode !== "image") return p;
+        const scale = Math.min(4, Math.max(1, patch.scale ?? p.imgScale ?? 1));
+        const dx = patch.dx ?? p.imgDx ?? 0;
+        const dy = patch.dy ?? p.imgDy ?? 0;
+        const href = p.svg.match(/href="([^"]*)"/)?.[1] ?? "";
+        const svg = buildImagePanelSvg(href, p.plot.w, p.plot.h, p.plot.x, p.plot.y, p.vb.w, p.vb.h, scale, dx, dy);
+        return { ...p, svg, imgScale: scale, imgDx: dx, imgDy: dy };
+      })
+    }));
   },
 
   removePanel: (id) => {
@@ -1465,8 +1506,10 @@ export const useStore = create<AppState>((set, get) => ({
       const g = s.gridGap;
       const figW = s.pageWidthMm * FIG_PX_PER_MM;
       const cellW = (figW - g * (cols - 1)) / cols;
+      // Use the STABLE import-time aspect, not the live `aspect` — Trim/crop change the live
+      // aspect, and feeding that back into the grid height made it drift smaller each cycle.
       const avgAspect = editable.length
-        ? editable.reduce((a, p) => a + (p.aspect || 1.4), 0) / editable.length
+        ? editable.reduce((a, p) => a + (p.baseAspect || p.aspect || 1.4), 0) / editable.length
         : 1.4;
       const cellH = cellW / avgAspect;
       const byId = new Map<string, Panel>();
