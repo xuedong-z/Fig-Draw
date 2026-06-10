@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Minus, Plus } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
-import type { DataSeries, Panel } from "@/lib/types";
+import type { DataSeries, ParsedElement, Panel } from "@/lib/types";
 
 const STEP = 6; // px per move click
 
@@ -52,9 +52,106 @@ function LegendRow({ panel, s }: { panel: Panel; s: DataSeries }) {
   );
 }
 
+/** One chart-title row: editable text + show/hide. */
+function TitleRow({ panel, el }: { panel: Panel; el: ParsedElement }) {
+  const t = useT();
+  const setElementText = useStore((st) => st.setElementText);
+  const hideElement = useStore((st) => st.hideElement);
+  const [text, setText] = useState(el.text ?? "");
+  const hidden = el.hidden ?? false;
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-line bg-elevated p-1.5">
+      <input
+        className="input-dark min-w-0 flex-1"
+        value={text}
+        placeholder={t("title.heading")}
+        onChange={(e) => {
+          setText(e.target.value);
+          setElementText(panel.id, el.scid, e.target.value);
+        }}
+      />
+      <button
+        className="tool-btn shrink-0 px-1.5"
+        onClick={() => hideElement(panel.id, el.scid, !hidden)}
+        title={hidden ? t("tip.show") : t("tip.hide")}
+      >
+        {hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+      </button>
+    </div>
+  );
+}
+
+/** Chart-title block (inside the Legend tab) — edit the recognized title's text, move it as
+ * a group, or designate any text element as the title when recognition missed it. The title
+ * FONT size is unified in the Typography tab (titlePt), so we just link there. */
+function TitleSection({ panel }: { panel: Panel }) {
+  const t = useT();
+  const setElementRole = useStore((s) => s.setElementRole);
+  const nudgeElements = useStore((s) => s.nudgeElements);
+  const setRightTab = useStore((s) => s.setRightTab);
+
+  const titles = panel.elements.filter((e) => e.role === "text-title");
+  const titleIds = titles.map((e) => e.scid);
+  // any text element the user could promote to the title (when auto-recognition missed it)
+  const candidates = panel.elements.filter(
+    (e) => e.tag === "text" && e.role !== "text-title" && (e.text ?? "").trim().length > 0
+  );
+  const move = (dx: number, dy: number) => titleIds.length && nudgeElements(panel.id, titleIds, dx, dy);
+
+  return (
+    <div className="mt-4 border-t border-line pt-3">
+      <div className="field-label mb-1">{t("title.heading")}</div>
+
+      {titles.length === 0 ? (
+        <>
+          <p className="mb-1.5 text-2xs text-faint">{t("title.none")}</p>
+          {candidates.length > 0 && (
+            <select
+              className="input-dark w-full"
+              value=""
+              onChange={(e) => e.target.value && setElementRole(panel.id, e.target.value, "text-title")}
+            >
+              <option value="">{t("title.designate")}</option>
+              {candidates.map((e) => (
+                <option key={e.scid} value={e.scid}>
+                  {(e.text ?? "").slice(0, 28)}
+                </option>
+              ))}
+            </select>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1.5">
+            {titles.map((e) => (
+              <TitleRow key={e.scid} panel={panel} el={e} />
+            ))}
+          </div>
+
+          <div className="field-label mb-1 mt-3">{t("title.move")}</div>
+          <div className="flex items-center gap-1">
+            <button className="tool-btn px-1.5" onClick={() => move(-STEP, 0)} title="←"><ChevronLeft size={13} /></button>
+            <button className="tool-btn px-1.5" onClick={() => move(0, -STEP)} title="↑"><ChevronUp size={13} /></button>
+            <button className="tool-btn px-1.5" onClick={() => move(0, STEP)} title="↓"><ChevronDown size={13} /></button>
+            <button className="tool-btn px-1.5" onClick={() => move(STEP, 0)} title="→"><ChevronRight size={13} /></button>
+          </div>
+
+          <p className="mt-3 text-[10px] text-faint">
+            {t("title.fontHint")}{" "}
+            <button className="text-accent hover:underline" onClick={() => setRightTab("type")}>
+              {t("tab.type")}
+            </button>
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** "Legend" tab — edit each entry's color/label/visibility, move the WHOLE legend as a
- * group, and adjust the spacing between entries. Built on recolorSeries / setElementText
- * / hideElement / nudgeElements / setLegendSpacing. */
+ * group, and adjust the spacing between entries. Also hosts the chart-title editor
+ * (TitleSection). Built on recolorSeries / setElementText / hideElement / nudgeElements /
+ * setLegendSpacing / setElementRole. */
 export function LegendPanel() {
   const t = useT();
   const panels = useStore((s) => s.panels);
@@ -143,6 +240,8 @@ export function LegendPanel() {
           </p>
         </>
       )}
+
+      {panel?.mode === "full" && <TitleSection panel={panel} />}
     </div>
   );
 }
